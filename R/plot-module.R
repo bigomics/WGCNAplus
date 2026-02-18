@@ -1,0 +1,591 @@
+#' Plot top modules most correlated with trait (unified).
+#'
+#' Works with both single-dataset and multi-dataset objects.
+#' When \code{multi = TRUE}, the object is expected to have a list of
+#' ME matrices in \code{res$MEs} and trait data are merged across datasets.
+#'
+#' @param res A WGCNA or multi-WGCNA result object.
+#' @param trait Trait name to plot.
+#' @param multi If TRUE, treat \code{res} as a multi-dataset object.
+#' @param nmax Maximum number of modules to plot.
+#' @param collapse If TRUE, collapse trait matrix (multi only).
+#' @param setpar Set par layout: TRUE/1 for portrait, 2 for landscape, FALSE for none.
+#' @param cex Character expansion factor.
+#' @return NULL (invisible). Generates a plot.
+#' @export
+plotModuleScores <- function(res, trait, nmax = 16, ##multi = FALSE, 
+                             collapse = FALSE, setpar = TRUE, cex = 1) {
+
+  ## is this concensus object
+  if(is.null(res$class)) res$class <- NA
+  multi <- (!is.null(res$layers) || res$class %in% c("consensus"))
+  if(!is.null(res$net)) multi <- multi && !is.null(res$net$multiMEs)
+  
+  if (multi) {
+    ## --- multi-dataset path ---
+    if (!"MEs" %in% names(res)) {
+      res$MEs <- lapply(res$net$multiMEs, function(m) m$data)
+    }
+    res$MEs <- lapply(res$MEs, as.matrix)
+    MEx <- as.matrix(mofa.merge_data(res$MEs))
+    Y <- lapply(res$MEs, function(m) res$datTraits[rownames(m), , drop = FALSE])
+    Y <- mofa.merge_data(Y)
+
+    batch <- sub(":.*", "", rownames(Y))
+    names(batch) <- rownames(Y)
+    nbatch <- length(res$MEs)
+  } else {
+    ## --- single-dataset path ---
+    MEx <- res$net$MEs
+    Y <- res$datTrait
+    kk <- intersect(rownames(MEx), rownames(Y))
+    MEx <- MEx[kk, ]
+    Y <- Y[kk, , drop = FALSE]
+    batch <- rep("", nrow(Y))
+    names(batch) <- rownames(Y)
+    nbatch <- 1
+  }
+
+  ## select top modules
+  rho <- cor(MEx, Y, use = "pairwise")
+  sel.modules <- names(sort(-abs(rho[, trait])))
+  sel.modules <- head(sel.modules, nmax)
+
+  if (multi) {
+    Y <- type.convert(data.frame(Y, check.names = FALSE), as.is = FALSE)
+    if (collapse) {
+      Y <- collapseTraitMatrix(Y)
+      trait <- sub("=.*", "", trait)
+    }
+  }
+
+  n <- length(sel.modules)
+  nr <- ceiling(sqrt(n))
+  nc <- ceiling(n / nr)
+  mar <- if (multi) c(2.5, 4, 2.5, 1) else c(4, 4, 2.5, 1)
+  if (setpar == 1) par(mfrow = c(nr, nc), mgp = c(2.6, 0.85, 0), mar = mar, cex = cex)
+  if (setpar == 2) par(mfrow = c(nc, nr), mgp = c(2.6, 0.85, 0), mar = mar, cex = cex)
+
+  yclass <- sapply(as.data.frame(Y), class)
+  is.binary <- apply(Y, 2, function(x) all(x %in% c(TRUE, FALSE, 0, 1, NA)))
+  yclass[which(is.binary)] <- "logical"
+
+  for (k in sel.modules) {
+    x <- Y[, trait]
+    y <- MEx[, k]
+    label <- k
+    col <- substring(label, 3, 99)
+
+    if (!multi) {
+      ## --- single-dataset plotting ---
+      col1 <- adjustcolor(col, alpha.f = 0.5)
+
+      if (yclass[trait] %in% c("factor", "logical")) {
+        boxplot(y ~ x,
+          main = label, col = col1,
+          xlab = trait, ylab = "ME score"
+        )
+        points(1 + x + 0.04 * rnorm(length(x)), y,
+          pch = 21, bg = col1, lwd = 0.5
+        )
+      }
+
+      if (yclass[trait] == "numeric") {
+        plot(x, y,
+          main = label,
+          pch = 21, cex = 1.1, col = 1, bg = col1, lwd = 0.25,
+          xlab = trait, ylab = "ME score"
+        )
+        abline(h = 0, lty = 2, lwd = 0.5)
+        r <- cor(x, y, use = "pairwise")
+        if (abs(r) > 0.3) {
+          abline(lm(y ~ x), col = 1, lwd = 0.6)
+          legend("bottomright", legend = paste("r=", round(r, 3)),
+            cex=0.8, y.intersp=0.82)
+        }
+      }
+    } else {
+      ## --- multi-dataset plotting ---
+      if (yclass[trait] %in% c("factor", "logical", "binary")) {
+        if (yclass[trait] %in% c("logical", "binary")) {
+          x <- (x == 1)
+        }
+        df <- data.frame(x = x, y = y, group = factor(batch))
+
+        par(mgp = c(2.4, 0.9, 0))
+        aa <- c(0.15, 0.55)
+        col1 <- sapply(aa, function(a) adjustcolor(col, alpha.f = a))
+
+        atx <- unlist(sapply(1:nbatch, function(j) j + c(-0.15, 0.15), simplify = FALSE))
+        atmid <- 1:nbatch
+
+        boxplot(
+          df$y ~ df$x + df$group,
+          at = atx,
+          xlim = c(0.6, nbatch + 0.4),
+          cols = col1,
+          main = label,
+          col = col1,
+          boxwex = 0.24,
+          xaxt = "n",
+          xlab = "",
+          ylab = "ME score"
+        )
+
+        mtext(levels(df$group), side = 1, line = 0.6, cex = 1.0, at = atmid)
+        bb <- c("FALSE", "TRUE")
+        legend("topright",
+          legend = bb, fill = col1,
+          cex = 0.8, y.intersp = 0.82, title = trait, title.cex = 1.1
+        )
+      } ## end of if factor
+
+      if (yclass[trait] %in% c("numeric", "integer")) {
+        df <- data.frame(x = x, y = y, group = factor(batch))
+        par(mgp = c(2.4, 0.9, 0))
+
+        aa <- seq(0.55, 0.15, length.out = nbatch)
+        col1 <- sapply(aa, function(a) adjustcolor(col, alpha.f = a))
+        names(col1) <- sort(unique(batch))
+
+        colx <- col1[as.integer(factor(batch))]
+
+        plot(
+          df$x, df$y,
+          pch = 21,
+          cex = 1,
+          lwd = 0.4,
+          bg = colx,
+          main = label,
+          xlab = trait,
+          ylab = "ME score"
+        )
+        bb <- names(res$MEs)
+        legend("topright",
+          legend = bb, fill = col1, cex = 0.8, y.intersp = 0.82
+        )
+
+        ## add regression lines
+        col2 <- adjustcolor(col1, red.f = 0.5, green.f = 0.5, blue.f = 0.5)
+        names(col2) <- names(col1)
+        for (b in unique(df$group)) {
+          ii <- which(df$group == b)
+          abline(lm(df$y[ii] ~ df$x[ii]), lwd = 1, lty = 1, col = col2[1])
+        }
+      } ## end of if continuous
+    }
+  }
+}
+
+
+#' Plot top modules most correlated with trait for multi expression
+#' data.
+#' 
+#' Works with both single-dataset and multi-dataset objects.
+#' When \code{multi = TRUE}, the object is expected to have a list of
+#' ME matrices in \code{res$MEs} and trait data are merged across datasets.
+#'
+#' @param res A WGCNA or multi-WGCNA result object.
+#' @param trait Trait name to plot.
+#' @param multi If TRUE, treat \code{res} as a multi-dataset object.
+#' @param nmax Maximum number of modules to plot.
+#' @param collapse.trait If TRUE, collapse trait matrix (multi only).
+#' @param setpar Set par layout: TRUE/1 for portrait, 2 for landscape, FALSE for none.
+#' @return NULL (invisible). Generates a plot.
+#' @export
+plotModuleScores.BAK <- function(res, trait,
+                                 multi = FALSE,
+                                 nmax = 16,
+                                 collapse.trait = FALSE,
+                                 base_size = 18,
+                                 plotlib = "base",
+                                 setpar = TRUE) {
+  Y <- res$datTrait
+
+  ## For multi we 'just' concatenate the ME matrices
+  if (multi) {
+    MEx <- do.call(rbind, lapply(res$MEs, as.matrix))
+    me.samples <- lapply(res$MEs, rownames)
+    batch <- max.col(sapply(me.samples, function(s) rownames(Y) %in% s))
+    batch <- names(res$MEs)[batch]
+    names(batch) <- rownames(Y)
+    nbatch <- length(res$MEs)
+  } else {
+    MEx <- res$net$MEs
+    batch <- ""
+    nbatch <- 1
+  }
+
+  ## align
+  kk <- intersect(rownames(MEx), rownames(Y))
+  MEx <- MEx[kk, ]
+  Y <- Y[kk, ]
+  if (!is.null(batch)) batch <- batch[kk]
+
+  sel.modules <- colnames(MEx)
+  if (nmax > 0) {
+    ## select top modules
+    rho <- cor(MEx, Y, use = "pairwise")
+    sel.modules <- names(sort(-abs(rho[, trait])))
+    sel.modules <- head(sel.modules, nmax)
+  }
+  ncol <- ceiling(sqrt(length(sel.modules)))
+
+  if (collapse.trait) {
+    Y <- type.convert(data.frame(Y, check.names = FALSE), as.is = FALSE)
+    Y <- collapseTraitMatrix(Y)
+    trait <- sub("=.*", "", trait)
+  }
+
+  module <- as.vector(sapply(sel.modules, rep, nrow(MEx)))
+  dfx <- data.frame(
+    sample = rownames(MEx),
+    trait = Y[, trait],
+    score = as.vector(unlist(MEx[, sel.modules])),
+    module = module,
+    group = batch
+  )
+
+  xtype <- class(type.convert(Y[, trait], as.is = TRUE))
+  xtype
+  if (xtype != "numeric") {
+    dfx$trait <- factor(dfx$trait)
+    if (nbatch == 1) {
+      ggplot2::ggplot(
+        dfx,
+        ggplot2::aes(x = factor(trait), y = score, fill = trait)
+      ) +
+        # ggplot2::aes(y = score, x = trait)) +
+        ggplot2::geom_boxplot() +
+        ggplot2::xlab(trait) +
+        ggplot2::ylab("ME score") +
+        ggplot2::facet_wrap(~module, ncol = ncol) +
+        ggplot2::theme_bw(base_size = base_size)
+    }
+
+    if (nbatch > 1) {
+      ggplot2::ggplot(
+        dfx,
+        ggplot2::aes(x = group, y = score, fill = trait)
+      ) +
+        ggplot2::geom_boxplot() +
+        ggplot2::xlab(trait) +
+        ggplot2::ylab("ME score") +
+        ggplot2::facet_wrap(~module, ncol = ncol) +
+        ggplot2::theme_bw(base_size = base_size)
+    }
+  } else {
+    dfx$trait <- as.numeric(dfx$trait)
+    ggplot2::ggplot(
+      dfx,
+      # ggplot2::aes(x = trait, y = score, color = group)) +
+      ggplot2::aes(x = trait, y = score, color = group)
+    ) +
+      ggplot2::geom_point(size = 0.6) +
+      ggplot2::geom_smooth(method = "lm", se = FALSE, linewidth = 0.6) +
+      ggplot2::xlab(trait) +
+      ggplot2::ylab("ME score") +
+      ggplot2::facet_wrap(~module, ncol = ncol, scales = "free") +
+      ggplot2::theme_bw(base_size = base_size)
+  }
+}
+
+#' Plot trait correlation scatter
+#'
+#' @export
+plotConsensusTraitCorrelation <- function(cons, traits=NULL) {
+  F <- list()
+  for(i in names(cons$layers)) {
+    r1 <- cor( cons$layers[[i]]$datExpr, cons$layers[[i]]$datTraits, use="pairwise")
+    F[[i]] <- r1
+  }  
+  colx <- cons$net$colors  
+  setname <- names(cons$layers)
+  if(is.null(traits)) traits <- colnames(F[[1]])
+  traits <- intersect(traits, colnames(F[[1]]))
+  par(mfrow=c(2,3), mar=c(5,5,3,1), cex=1.2)
+  for(k in traits) {
+    f1 <- sapply(F, function(x) x[,k])
+    plot( f1[,1], f1[,2], col=colx, main=k,
+      xlab = paste0("trait correlation (",setname[1],")"),
+      ylab = paste0("trait correlation (",setname[2],")")
+    )
+    abline(v=0, h=0, lty=2, lwd=0.6)
+  }
+}
+
+#' Plot trait correlation as bar plots
+#'
+#' @param res A WGCNA result object.
+#' @param trait Trait name(s) to plot.
+#' @param multi If TRUE, use multi-dataset results.
+#' @param colored If TRUE, color bars by module.
+#' @param beside If TRUE, draw bars side-by-side.
+#' @param main Plot title.
+#' @param cex.main Title text size.
+#' @param setpar If TRUE, set par layout.
+#' @return NULL (invisible). Generates a plot.
+#' @export
+plotTraitCorrelationBarPlots <- function(res, trait, multi = FALSE,
+                                               colored = TRUE, beside = TRUE,
+                                               main = NULL, cex.main = 1.3,
+                                               setpar = TRUE) {
+  if (setpar) {
+    nr <- ceiling(sqrt(length(trait)))
+    nc <- ceiling(length(trait) / nr)
+    par(mfrow = c(nr, nc))
+  }
+  p <- trait[1]
+  for (p in trait) {
+    groups <- NULL
+    if (multi) {
+      mt <- res$modTraits
+      groups <- names(mt)
+      m1 <- sapply(mt, function(x) x[, p])
+    } else {
+      m1 <- res$modTraits[, p]
+    }
+    colnames(m1) <- paste0(p, " (", colnames(m1), ")")
+    me.col <- grey.colors(2)
+    if (colored) {
+      me.col <- sub("ME", "", rownames(m1))
+      me.col <- rbind(me.col, me.col)
+      aa <- seq(0.7, 0.25, length.out = nrow(me.col))
+      for (i in 1:nrow(me.col)) {
+        me.col[i, ] <- adjustcolor(me.col[i, ], alpha.f = aa[i])
+      }
+    }
+
+    if (beside) {
+      barplot(t(m1),
+        las = 3, beside = TRUE, col = me.col,
+        ylab = "trait correlation (rho)"
+      )
+      tt <- p
+      if (!is.null(main)) tt <- main
+      title(tt, cex.main = cex.main)
+      if (length(groups) > 1) {
+        legend("topright", legend = groups, fill = grey.colors(length(groups)))
+      }
+    } else {
+      me.col <- NULL
+      if (colored) me.col <- sub("ME", "", rownames(m1))
+      for (i in 1:ncol(m1)) {
+        barplot(m1[, i],
+          las = 3, beside = TRUE, col = me.col,
+          ylab = "trait correlation (rho)"
+        )
+        tt <- colnames(m1)[i]
+        if (!is.null(main)) tt <- main
+        title(tt, cex.main = cex.main)
+      }
+    }
+  }
+}
+
+
+#' Plot MDS of features colored by module
+#'
+#' @param wgcna A WGCNA result object.
+#' @param main Plot title.
+#' @param scale If TRUE, scale features.
+#' @return NULL (invisible). Generates a plot.
+#' @export
+plotMDS <- function(wgcna, main = NULL, scale = FALSE) {
+  cc <- labels2colors(wgcna$net$color)
+  pc <- svd(t(scale(wgcna$datExpr, scale = scale)), nv = 2)$u[, 1:2]
+  # pc <- svd(t(scale(wgcna$datExpr)),nv=1)$u[,1:2]
+  colnames(pc) <- c("MDS-x", "MDS-y")
+  if (is.null(main)) main <- "MDS of features"
+  plot(pc, col = cc, main = main)
+}
+
+#' Plot feature UMAP colored by module
+#'
+#' @param wgcna A WGCNA result object.
+#' @param nhub Number of hub genes to label.
+#' @param method Embedding method: "clust", "umap", or "mds".
+#' @param scale If TRUE, scale features.
+#' @param main Plot title.
+#' @param plotlib Plotting library to use.
+#' @param annot Annotation table for gene symbols.
+#' @return NULL (invisible). Generates a plot.
+#' @export
+plotFeatureUMAP <- function(wgcna, nhub = 3, method = "clust",
+                                  scale = FALSE, main = NULL,
+                                  plotlib = "base", annot = NULL) {
+  if (method == "clust" && "clust" %in% names(wgcna)) {
+    pos <- wgcna$clust[["umap2d"]]
+  } else if (method == "umap") {
+    if (!requireNamespace("uwot", quietly = TRUE)) {
+      stop("Package 'uwot' is required for UMAP computation")
+    }
+    cX <- t(scale(wgcna$datExpr, scale = scale)) ## WGCNA uses correlation
+    pos <- uwot::umap(cX)
+    colnames(pos) <- c("UMAP-x", "UMAP-y")
+    rownames(pos) <- colnames(wgcna$datExpr)
+    ##  } else if(method=="mds") {
+  } else {
+    pos <- svd(t(scale(wgcna$datExpr, scale = scale)), nv = 2)$u[, 1:2]
+    colnames(pos) <- c("MDS-x", "MDS-y")
+    rownames(pos) <- colnames(wgcna$datExpr)
+  }
+
+  if (is.null(main)) main <- "Feature UMAP colored by module"
+
+  hubgenes <- NULL
+  if (nhub > 0) {
+    ## get top hub genes
+    mm <- wgcna$stats$moduleMembership
+    hubgenes <- apply(mm, 2, function(x) head(names(sort(-x)), nhub), simplify = FALSE)
+    sel <- which(names(hubgenes) != "MEgrey")
+    hubgenes <- unlist(hubgenes[sel])
+  }
+
+  col1 <- wgcna$net$colors
+  genes1 <- names(which(col1 != "grey"))
+  if (!is.null(annot)) {
+    rownames(pos) <- probe2symbol(rownames(pos), annot, "gene_name", fill_na = TRUE)
+    names(col1) <- probe2symbol(names(col1), annot, "gene_name", fill_na = TRUE)
+    genes1 <- probe2symbol(genes1, annot, "gene_name", fill_na = TRUE)
+    if (nhub > 0) {
+      hubgenes <- setNames(probe2symbol(hubgenes, annot, "gene_name", fill_na = TRUE), names(hubgenes))
+    }
+  }
+  pgx.scatterPlotXY(
+    pos,
+    var = col1,
+    col = sort(unique(col1)),
+    hilight = genes1,
+    hilight2 = hubgenes,
+    cex.lab = 1.2,
+    label.clusters = FALSE,
+    title = main,
+    plotlib = plotlib
+  )
+}
+
+
+#' Plot module significance.
+#'
+#' @export
+plotModuleSignificance <- function(wgcna, trait, main = NULL, abs = FALSE) {
+  ## cc <- paste0("ME",wgcna$net$color)
+  cc <- labels2colors(wgcna$net$color)
+  if ("stats" %in% names(wgcna)) {
+    traitSignificance <- wgcna$stats$traitSignificance
+  } else {
+    traitSignificance <- as.data.frame(cor(wgcna$datExpr, wgcna$datTraits, use = "p"))
+    names(traitSignificance) <- names(wgcna$datTraits)
+    rownames(traitSignificance) <- colnames(wgcna$datExpr)
+  }
+  geneSig <- traitSignificance[, trait]
+  if (is.null(main)) main <- paste("Module significance with", trait)
+  if (abs) geneSig <- abs(geneSig)
+  WGCNA::plotModuleSignificance(
+    geneSig,
+    colors = cc, main = main, boxplot = FALSE
+  )
+}
+
+
+#' Plot hub gene network per module
+#'
+#' @param wgcna A WGCNA result object.
+#' @param modules Module names to plot.
+#' @param alpha Color transparency for vertices.
+#' @param setpar If TRUE, set par layout.
+#' @return NULL (invisible). Generates a plot.
+#' @export
+plotModuleHubGenes <- function(wgcna, modules = NULL,
+                                     alpha = 0.5, setpar = TRUE) {
+  if (is.null(modules)) {
+    modules <- colnames(wgcna$stats$moduleMembership)
+  }
+  modules <- intersect(modules, colnames(wgcna$stats$moduleMembership))
+  if (length(modules) == 0) {
+    message("ERROR. no valid modules")
+    return(NULL)
+  }
+
+  if (setpar) {
+    nr <- floor(length(modules)**0.5)
+    nc <- ceiling(length(modules) / nr)
+    nr
+    nc
+    par(mfrow = c(nr, nc), mar = c(0, 1, 2.5, 1))
+  }
+  for (k in modules) {
+    mm <- wgcna$stats$moduleMembership[, k]
+    mm.score <- head(sort(mm, decreasing = TRUE), 30)
+    topgenes <- names(mm.score)
+    A <- cor(wgcna$datExpr[, topgenes])
+    diag(A) <- 0
+    A <- (A - min(A, na.rm = TRUE)) / (max(A, na.rm = TRUE) - min(A, na.rm = TRUE))
+    A[is.na(A)] <- 0
+    gr <- igraph::graph_from_adjacency_matrix(
+      A,
+      mode = "undirected", weighted = TRUE, diag = FALSE
+    )
+    norm.mm.score <- (mm.score - min(mm.score)) / (max(mm.score) - min(mm.score))
+    clr <- sub("ME", "", k)
+    if (!is.na(as.integer(clr))) clr <- as.integer(clr)
+    if (clr == "black") clr <- "grey40"
+    plot(gr,
+      layout = igraph::layout_in_circle,
+      edge.width = 6 * igraph::E(gr)$weight**8,
+      vertex.size = 5 + 15 * norm.mm.score,
+      vertex.color = adjustcolor(clr, alpha.f = alpha),
+      vertex.frame.color = clr
+    )
+    title(paste("Module", k), line = 0.33)
+  }
+}
+
+#' Plot gene correlation network graph
+#'
+#' @param wgcna A WGCNA result object.
+#' @param genes Gene names to include.
+#' @param col Vertex colors.
+#' @param edge.alpha Edge transparency.
+#' @param rgamma Gamma exponent for edge weights.
+#' @param edge.width Base edge width.
+#' @param alpha Vertex color transparency.
+#' @param min.rho Minimum correlation threshold.
+#' @param setpar If TRUE, set par layout.
+#' @return NULL (invisible). Generates a plot.
+#' @export
+plotGeneNetwork <- function(wgcna, genes, col = NULL,
+                                  edge.alpha = 0.3,
+                                  rgamma = 4,
+                                  edge.width = 6,
+                                  alpha = 0.5,
+                                  min.rho = 0.5,
+                                  setpar = TRUE) {
+  A <- cor(wgcna$datExpr[, genes])
+  A <- A * (abs(A) > min.rho)
+  A[is.na(A)] <- 0
+  gr <- igraph::graph_from_adjacency_matrix(
+    A,
+    mode = "undirected", weighted = TRUE, diag = FALSE
+  )
+  vcex <- matrixStats::colVars(wgcna$datExpr[, genes])
+  vcex <- vcex / max(abs(vcex))
+  if (is.null(col)) {
+    col <- wgcna$net$color[genes]
+  }
+  col <- sub("black", "grey40", col)
+  ecol <- c("darkred", "darkgreen")[1 + 1 * (igraph::E(gr)$weight > 0)]
+  table(ecol)
+  ecol <- adjustcolor(ecol, alpha.f = edge.alpha)
+  ewt <- abs(igraph::E(gr)$weight)
+  ewt <- (ewt / max(abs(ewt)))**rgamma
+  plot(gr,
+    layout = igraph::layout_in_circle,
+    edge.width = edge.width * ewt,
+    edge.color = ecol,
+    vertex.size = 5 + 20 * vcex,
+    vertex.color = adjustcolor(col, alpha.f = alpha),
+    vertex.frame.color = col
+  )
+}

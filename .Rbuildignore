@@ -1,0 +1,7 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+^Makefile$
+^CLAUDE\.md$
+^\.claude$
+^\.git$
+^\.gitignore$

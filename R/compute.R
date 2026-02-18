@@ -1,0 +1,711 @@
+
+#' Run main WGCNA computation pipeline
+#'
+#' @param X Gene expression matrix (genes x samples).
+#' @param samples Sample metadata data frame.
+#' @param contrasts Optional contrast matrix.
+#' @param ngenes Maximum number of genes to use.
+#' @param minmodsize Minimum module size.
+#' @param power Soft-thresholding power.
+#' @param mergeCutHeight Cut height for merging modules.
+#' @param deepsplit Deep split sensitivity level.
+#' @param minKME Minimum KME to stay in module.
+#' @param treeCut Tree cut height threshold.
+#' @param treeCutCeiling Upper quantile for tree cut.
+#' @param networktype Network type (signed/unsigned).
+#' @param tomtype TOM type (signed/unsigned).
+#' @param clustMethod Hierarchical clustering method.
+#' @param cutMethod Tree cutting method.
+#' @param calcMethod TOM calculation method.
+#' @param lowrank Low-rank approximation dimension.
+#' @param numericlabels Use numeric module labels.
+#' @param maxBlockSize Maximum block size for computation.
+#' @param merge.dendro Merge block dendrograms.
+#' @param compute.stats Compute gene statistics.
+#' @param prefix Two-letter eigengene prefix.
+#' @param sv.tom SVD rank for TOM reduction.
+#' @param drop.ref Drop reference level in traits.
+#' @param net Pre-computed network object.
+#' @param is.multiomics Force multi-omics mode.
+#' @param verbose Verbosity level.
+#'
+#' @return List with WGCNA results.
+#'
+#' @export
+computeWGCNA <- function(X,
+                         samples,
+                         contrasts = NULL,
+                         ngenes = 2000,
+                         minmodsize = 20,
+                         power = 12,
+                         mergeCutHeight = 0.15,
+                         deepsplit = 2,
+                         minKME = 0.3,
+                         treeCut = 0.99,
+                         treeCutCeiling = 1,
+                         networktype = "signed",
+                         tomtype = "signed",
+                         clustMethod = "average",
+                         cutMethod = "hybrid",
+                         calcMethod = "fast",
+                         lowrank = 40,
+                         numericlabels = FALSE,
+                         maxBlockSize = 9999,
+                         merge.dendro = TRUE,
+                         compute.stats = TRUE,
+                         prefix = "ME",
+                         sv.tom = 40,
+                         drop.ref = FALSE,
+                         net = NULL,
+                         is.multiomics = NULL,
+                         verbose = 0) {
+  if (0) {
+    ngenes <- 2000
+    minmodsize <- 20
+    power <- 12
+    mergeCutHeight <- 0.15
+    deepsplit <- 2
+    minKME <- 0.3
+    treeCut <- 0.99
+    treeCutCeiling <- 1
+    networktype <- "signed"
+    tomtype <- "signed"
+    clustMethod <- "average"
+    cutMethod <- "hybrid"
+    calcMethod <- "fast"
+    lowrank <- 40
+    numericlabels <- FALSE
+    maxBlockSize <- 9999
+    merge.dendro <- TRUE
+    compute.stats <- TRUE
+    prefix <- "ME"
+    sv.tom <- 40
+    drop.ref <- FALSE
+    net <- NULL
+    is.multiomics <- NULL
+    verbose <- 0
+  }
+
+  ## if (nchar(prefix) != 2) {
+  ##   stop("prefix must be two capital letters")
+  ## }
+
+  kk <- intersect(colnames(X), rownames(samples))
+  X <- as.matrix(X[, kk])
+  samples <- as.data.frame(samples, check.names = FALSE)
+  samples <- samples[kk, , drop = FALSE]
+  if (!is.null(contrasts)) {
+    contrasts <- contrasts[kk, , drop = FALSE]
+  }
+
+  nmissing <- sum(is.na(X))
+  if (nmissing > 0) {
+    message("Found ", nmissing, " missing values in X. Imputing prior to WGCNA.")
+    X <- svdImpute2(X)
+  }
+
+  X <- X[!duplicated(rownames(X)), , drop = FALSE]
+
+  ## restrict number of genes
+  if (ngenes > 0 && nrow(X) > ngenes) {
+    if (is.null(is.multiomics)) is.multiomics <- all(grepl(":", rownames(X))) ## not robust!!
+    if (is.multiomics) {
+      message("[compute] topSD = ", ngenes, " (multi-omics)")
+      X <- mofa.topSD(X, ngenes)
+    } else {
+      message("[compute] topSD = ", ngenes, " (single omics)")
+      sdx <- matrixStats::rowSds(X, na.rm = TRUE)
+      X <- X[sdx > 0.1 * mean(sdx, na.rm = TRUE), ] ## filter low SD??
+      X <- X[order(-matrixStats::rowSds(X, na.rm = TRUE)), ]
+      X <- utils::head(X, ngenes)
+    }
+  }
+
+  datExpr <- t(X)
+
+  ## adapt for small datasets (also done in WGCNA package)
+  minmodsize <- min(minmodsize, ncol(datExpr) / 2)
+  if (!is.null(power)) power <- power[1]
+
+  message("[compute] minmodsize = ", minmodsize)
+  message("[compute] number of features = ", nrow(X))
+  message("[compute] minKME = ", minKME)
+  message("[compute] power = ", power)
+  message("[compute] mergeCutHeight = ", mergeCutHeight)
+  message("[compute] calcMethod = ", calcMethod)
+
+  ## WGCNA::enableWGCNAThreads()
+  if (is.null(net)) {
+    message("[compute] computeModules....")
+    net <- computeModules(
+      datExpr,
+      power = power,
+      networkType = networktype,
+      TOMType = tomtype,
+      calcMethod = calcMethod,
+      lowrank = lowrank,
+      clustMethod = clustMethod,
+      cutMethod = cutMethod,
+      deepSplit = deepsplit,
+      minModuleSize = minmodsize,
+      mergeCutHeight = mergeCutHeight,
+      minKMEtoStay = minKME,
+      treeCut = treeCut,
+      treeCutCeiling = treeCutCeiling,
+      numericLabels = numericlabels,
+      maxBlockSize = maxBlockSize,
+      returnTOM = TRUE,
+      verbose = verbose
+    )
+  }
+
+  if (!"MEs" %in% names(net)) {
+    message("[compute]: running WGCNA::moduleEigengenes")
+    net$MEs <- WGCNA::moduleEigengenes(datExpr, colors = net$colors)$eigengenes
+  }
+
+  ## Substitue prefix="ME"
+  if (prefix != "ME") names(net$MEs) <- sub("^ME", prefix, names(net$MEs))
+  net$labels <- paste0(prefix, net$colors)
+  names(net$labels) <- colnames(datExpr)
+
+  ## clean up traits matrix
+  datTraits <- data.frame(samples, check.names = FALSE)
+  isdate <- apply(datTraits, 2, is.Date)
+  datTraits <- datTraits[, !isdate, drop = FALSE]
+
+  ## Expand multi-class discrete phenotypes into binary vectors
+  datTraits <- utils::type.convert(datTraits, as.is = TRUE)
+  datTraits <- expandPhenoMatrix(datTraits, keep.numeric = TRUE, drop.ref = drop.ref)
+
+  if (!is.null(contrasts)) {
+    message("[compute] adding contrasts to datTraits")
+    ctx <- makeContrastsFromLabelMatrix(contrasts)
+    ctx <- sign(ctx)
+    ctx[ctx==0] <- NA
+    ctx[ctx==-1] <- 0
+    datTraits <- cbind( datTraits, ctx)
+  }
+
+  if (is.null(datTraits)) {
+    message("WARNING:: no valid traits. creating random traits.")
+    ## random.trait <- sample(c(0,1), nrow(samples), replace=TRUE)
+    random.trait <- head(rep(c(0, 1), nrow(samples)), nrow(samples))
+    datTraits <- data.frame(random = random.trait)
+    rownames(datTraits) <- rownames(samples)
+  }
+
+  ## list of genes in modules
+  me.genes <- tapply(names(net$colors), net$colors, list)
+  names(me.genes) <- paste0(prefix, names(me.genes))
+  me.genes <- me.genes[names(net$MEs)]
+
+  ## get colors of eigengene modules
+  color1 <- labels2colors(net$colors)
+  me.colors <- color1[!duplicated(color1)]
+  me.labels <- net$labels[!duplicated(color1)]
+  names(me.colors) <- me.labels
+  me.colors <- me.colors[names(net$MEs)]
+
+  ## compute TOM matrix (we need for some plots)
+  if (!is.null(net$TOM)) {
+    TOM <- net$TOM
+    net$TOM <- NULL
+  } else {
+    message("[compute] recomputing TOM matrix...")
+    TOM <- WGCNA::TOMsimilarityFromExpr(
+      datExpr,
+      power = net$power,
+      TOMType = tomtype,
+      networkType = networktype,
+      verbose = verbose
+    )
+  }
+
+  ## instead of the huge TOM matrix we save a smaller SVD.
+  svTOM <- NULL
+  if (sv.tom > 0) {
+    ## sv.tom <- ceiling(min(sv.tom,dim(datExpr)/2))
+    message("[compute] reducing TOM. sv.tom = ", sv.tom)
+    rownames(TOM) <- colnames(TOM) <- colnames(datExpr)
+    sv.tom <- min(sv.tom, ncol(TOM) - 1)
+    sv <- irlba::irlba(TOM, nv = sv.tom)
+    svTOM <- sv$v %*% diag(sqrt(sv$d))
+    rownames(svTOM) <- colnames(datExpr)
+  }
+
+  ## compute module eigenvectors (loading matrix)
+  message("[compute] computing module eigenvectors...")
+  MVs <- list()
+  for (clr in unique(net$colors)) {
+    ii <- which(net$colors == clr)
+    mX <- datExpr[, ii, drop = FALSE]
+    mX <- scale(mX) ## NOTE: seems WGCNA is using full scaling
+    if (ncol(mX) > 1) {
+      res <- irlba::irlba(mX, nv = 1, nu = 1)
+      sv1 <- res$v[, 1] * res$d[1]
+    } else {
+      sv1 <- 1
+    }
+    sv <- rep(0, ncol(datExpr))
+    sv[ii] <- sv1
+    MVs[[paste0(prefix, clr)]] <- sv
+  }
+  MVs <- as.matrix(do.call(cbind, MVs[names(net$MEs)]))
+  rownames(MVs) <- colnames(datExpr)
+
+  ## compute gene statistics
+  stats <- NULL
+  if (compute.stats) {
+    message("[compute] computing gene statistics...")
+    stats <- computeGeneStats(net, datExpr, datTraits, TOM = TOM)
+  }
+
+  ## module-traits matrix
+  message("[compute] computing module-traits matrix...")
+  modTraits <- cor(net$MEs, datTraits, use = "pairwise")
+
+  ## merge dendrograms
+  if (merge.dendro) {
+    message("[compute] merge_block_dendrograms...")
+    merged <- try(merge_block_dendrograms(net, TOM))
+    if (!inherits(merged, "try-error")) {
+      net$merged_dendro <- merged
+    } else {
+      net$merged_dendro <- NULL
+    }
+  }
+  remove(TOM) ## big
+
+  ## construct results object
+  results <- list(
+    datExpr = datExpr,
+    datTraits = datTraits,
+    ## TOM = TOM,  ## this can be BIG!!! generally no need, just for plotting
+    svTOM = svTOM, ## smaller singular vectors
+    net = net,
+    me.genes = me.genes,
+    me.colors = me.colors,
+    W = MVs,
+    modTraits = modTraits,
+    stats = stats
+  )
+
+  message("[compute] completed. \n\n")
+
+  return(results)
+}
+
+#' Reimplementation for WGCNA::blockwiseModules(). This returns exact
+#' same object as WGCNA::blockwiseModules() but is faster and allows
+#' different clustering linkage methods (ward, complete).
+#'
+#' @param datExpr Expression data (samples x genes).
+#' @param power Soft-thresholding power.
+#' @param networkType Network type (signed/unsigned).
+#' @param TOM Pre-computed TOM matrix.
+#' @param TOMType TOM type (signed/unsigned).
+#' @param calcMethod TOM calculation method.
+#' @param lowrank Low-rank approximation dimension.
+#' @param clustMethod Hierarchical clustering method.
+#' @param cutMethod Tree cutting method.
+#' @param deepSplit Deep split sensitivity level.
+#' @param treeCut Tree cut height threshold.
+#' @param treeCutCeiling Upper quantile for tree cut.
+#' @param minModuleSize Minimum module size.
+#' @param minModuleSize2 Secondary minimum module size.
+#' @param mergeCutHeight Cut height for merging modules.
+#' @param minKMEtoStay Minimum KME to stay in module.
+#' @param numericLabels Use numeric module labels.
+#' @param maxBlockSize Maximum block size for computation.
+#' @param returnTOM Return TOM matrix in output.
+#' @param verbose Verbosity level.
+#'
+#' @return List mimicking blockwiseModules output.
+#'
+#' @keywords internal
+computeModules <- function(
+  datExpr,
+  power = 6,
+  networkType = "signed",
+  TOM = NULL,
+  TOMType = "signed",
+  calcMethod = "fast",
+  lowrank = 20,
+  clustMethod = "average",
+  cutMethod = "hybrid", ## hybrid, tree, static
+  deepSplit = 2,
+  treeCut = 0.99,
+  treeCutCeiling = 1,
+  minModuleSize = 20,
+  minModuleSize2 = minModuleSize,
+  mergeCutHeight = 0.15,
+  minKMEtoStay = 0.3,
+  numericLabels = FALSE, ## numeric or 'color' labels
+  maxBlockSize = 9999,
+  returnTOM = FALSE,
+  verbose = 1
+) {
+  # power=6;networkType=TOMType="signed";minModuleSize=20;mergeCutHeight=0.15;minKMEtoStay=0.3;numericLabels=FALSE;clustMethod="average";deepSplit = 2;treeCut = 0.99;treeCutCeiling = 1;
+
+  cor <- WGCNA::cor ## needed...
+  deepSplit <- as.integer(deepSplit)
+  lowrank <- as.integer(lowrank)
+
+  if (is.null(power) || is.na(power)) power <- "sft" ## use iqr?
+  auto.power <- power[1] %in% c("sft", "iqr")
+  if (auto.power) {
+    message("[computeModules] estimating power with method = ", power[1])
+    powers <- c(c(1:10), seq(from = 12, to = 20, by = 2))
+    powers <- c(powers, seq(from = 25, to = 50, by = 5))
+    power <- pickSoftThreshold(datExpr,
+      sft = NULL, rcut = 0.85,
+      method = power[1], nmax = 2000, verbose = 0
+    )
+    if (is.na(power)) power <- 6
+    message("[compute_multiomics] estimated power = ", power)
+  }
+
+  if (calcMethod == "blockwise") {
+    message("[computeModules] computing blockwiseModules...")
+    net <- WGCNA::blockwiseModules(
+      datExpr,
+      power = power,
+      networkType = networkType,
+      TOMType = TOMType,
+      minModuleSize = minModuleSize,
+      mergeCutHeight = mergeCutHeight,
+      minKMEtoStay = minKMEtoStay,
+      numericLabels = numericLabels, ## numeric or 'color' labels
+      deepSplit = deepSplit,
+      maxBlockSize = maxBlockSize,
+      verbose = verbose
+    )
+    return(net)
+  }
+
+  clustMethod <- sub("^ward$", "ward.D", clustMethod)
+  ## define distance matrix
+  if (is.null(TOM)) {
+    adjacency <- WGCNA::adjacency(datExpr, power = power, type = networkType)
+    adjacency[is.na(adjacency)] <- 0
+    if (calcMethod == "fast") {
+      if (verbose > 0) {
+        message("[computeModules] Computing TOM matrix using fast method...")
+      }
+      TOM <- fastTOMsimilarity(adjacency, tomtype = TOMType, lowrank = lowrank)
+    } else if (calcMethod == "adjacency") {
+      if (verbose > 0) {
+        message("[computeModules] Computing using adjacency as TOM matrix...")
+      }
+      TOM <- adjacency
+    } else if (calcMethod == "full") {
+      if (verbose > 0) message("[computeModules] Computing full TOM matrix...")
+      ## SLOW!!!
+      TOM <- WGCNA::TOMsimilarity(adjacency, TOMType = TOMType, verbose = verbose)
+    } else {
+      stop("[computeModules] ERROR: invalid calcMethod parameter:", calcMethod)
+    }
+    dimnames(TOM) <- dimnames(adjacency)
+  }
+
+  ## transform to dissTOM
+  dissTOM <- 1 - TOM
+
+  ## clustering
+  if (verbose > 0) message("Clustering features using ", clustMethod, " linkage")
+  ## geneTree <- flashClust::flashClust(as.dist(dissTOM), method=clustMethod)
+  geneTree <- stats::hclust(as.dist(dissTOM), method = clustMethod)
+
+  ## sometimes there is a height error. following is a fix.
+  geneTree$height <- round(geneTree$height, 6)
+
+  ## exception1
+  if (minModuleSize <= 1 && cutMethod != "static") {
+    message("WARNING: minModuleSize==1. Changing to static cutting")
+    cutMethod <- "static"
+  }
+
+  if (treeCut > 1) cutMethod <- "static"
+  if (treeCut <= 1) {
+    ## transform from relative to actual
+    qq <- quantile(geneTree$height, probs = c(0.05, treeCutCeiling))
+    treeCut <- qq[1] + treeCut * diff(qq)
+  }
+
+  if (verbose > 0) {
+    message("Tree cut method: ", cutMethod)
+    message("treeCut = ", treeCut)
+    message("deepSplit = ", deepSplit)
+    message("minModuleSize = ", minModuleSize)
+  }
+
+  if (cutMethod %in% c("hybrid", "tree")) {
+    if (cutMethod == "tree") deepSplit <- (deepSplit > 0)
+    label <- dynamicTreeCut::cutreeDynamic(
+      geneTree,
+      method = cutMethod,
+      cutHeight = treeCut,
+      distM = dissTOM,
+      deepSplit = deepSplit,
+      minClusterSize = minModuleSize2
+    )
+  } else if (cutMethod == "static" && treeCut <= 1) {
+    if (verbose > 0) message("Static cutting tree at fixed H = ", treeCut)
+    label <- cutree(geneTree, h = treeCut)
+  } else if (cutMethod == "static" && treeCut > 1) {
+    if (verbose > 0) message("Static cutting tree with fixed K = ", treeCut)
+    label <- cutree(geneTree, k = treeCut)
+  } else {
+    stop("ERROR: could not determine cutMethod")
+  }
+  label <- as.integer(label)
+  table(label)
+  nmodules <- length(unique(label))
+  if (verbose > 0) message("Found ", nmodules, " modules")
+
+  ## Eigengenes
+  if (verbose > 0) message("Calculating eigengenes...")
+  colors <- WGCNA::labels2colors(label)
+  MEs <- WGCNA::moduleEigengenes(datExpr, colors = colors)$eigengenes
+
+  # Control MEgrey, if less than 200 features on data, remove it. Also, check that its not full of NaNs
+  if (ncol(datExpr) < 200 && "MEgrey" %in% colnames(MEs)) {
+    MEs$MEgrey <- NULL
+  }
+  if ("MEgrey" %in% colnames(MEs) && all(is.na(MEs$MEgrey))) {
+    MEs$MEgrey <- NULL
+  }
+
+  ## prune using minKME
+  if (minKMEtoStay > 0) {
+    if (verbose > 0) message("Pruning features using minKME = ", minKMEtoStay)
+    ngrey <- sum(colors == "grey")
+    for (k in unique(colors)) {
+      if (!paste0("ME", k) %in% colnames(MEs)) next
+      ii <- which(colors == k)
+      if (length(ii) > 1) {
+        eg <- MEs[, paste0("ME", k)]
+        kme <- cor(datExpr[, ii, drop = FALSE], eg, use = "pairwise")[, 1]
+        kme.sign <- as.numeric(names(which.max(table(sign(kme)))))
+        kme <- kme * kme.sign
+        ii <- ii[which(kme < minKMEtoStay)]
+        if (length(ii)) colors[ii] <- "grey"
+      }
+    }
+    ngrey <- sum(colors == "grey") - ngrey
+    if (verbose > 0) message("Pruned ", ngrey, " low KME features")
+  }
+
+  ## Merge similar modules
+  unmergedColors <- colors
+  if (mergeCutHeight > 0 && length(MEs) > 1) {
+    if (verbose > 0) message("Merging similar modules: mergeCutHeight = ", mergeCutHeight)
+    merge <- mergeCloseModules(datExpr, colors, cutHeight = mergeCutHeight, MEs = MEs)
+    unmergedColors <- colors
+    colors <- merge$colors
+    MEs <- merge$MEs
+    if (verbose > 0) {
+      n0 <- length(unique(unmergedColors))
+      n1 <- length(unique(colors))
+      message("Merged ", n0 - n1, " modules")
+    }
+  }
+
+  ## filter on minModuleSize
+  if (minModuleSize > 1) {
+    too.small <- names(which(table(colors) < minModuleSize))
+    too.small
+    if (length(too.small)) {
+      if (verbose > 0) message("Removing ", length(too.small), " too small modules")
+      colors[colors %in% too.small] <- "grey"
+    }
+  }
+
+  ## Update MEs
+  if ("grey" %in% colors && !"MEgrey" %in% names(MEs)) {
+    MEs <- WGCNA::moduleEigengenes(datExpr, colors = colors)$eigengenes
+  }
+  MEs <- MEs[sub("^ME", "", names(MEs)) %in% colors]
+
+  # Rename to numeric
+  if (numericLabels) {
+    if (verbose > 0) message("Renaming to numeric labels")
+    colorOrder <- names(sort(table(colors), decreasing = TRUE))
+    colorOrder <- unique(c("grey", colorOrder))
+    colors <- match(colors, colorOrder) - 1
+    unmergedColors <- match(unmergedColors, colorOrder) - 1
+    mecolor <- sub("^ME", "", names(MEs))
+    names(MEs) <- paste0("ME", match(mecolor, colorOrder) - 1)
+  } else {
+    # Rename to standard colors, most frequent first
+    if (verbose > 0) message("Renaming to standard colors")
+    colorOrder <- names(sort(table(colors), decreasing = TRUE))
+    colorOrder <- unique(c("grey", colorOrder))
+    newcolor <- setdiff(WGCNA::standardColors(), "grey")
+    n0 <- length(colorOrder)
+    n1 <- length(newcolor)
+    if (n1 < n0) newcolor <- make.unique(rep(newcolor, ceiling(n0 / n1)))
+    newcolor <- unique(c("grey", newcolor))
+    colors <- newcolor[match(colors, colorOrder)]
+    unmergedColors <- newcolor[match(unmergedColors, colorOrder)]
+    mecolor <- sub("^ME", "", names(MEs))
+    names(MEs) <- paste0("ME", newcolor[match(mecolor, colorOrder)])
+  }
+
+  names(colors) <- colnames(datExpr)
+  names(unmergedColors) <- colnames(datExpr)
+
+  net <- list()
+  net$colors <- colors
+  net$unmergedColors <- unmergedColors
+  net$MEs <- MEs
+  net$goodSamples <- rep(TRUE, nrow(datExpr))
+  net$goodGenes <- rep(TRUE, ncol(datExpr))
+  net$dendrograms <- list(geneTree)
+  net["TOMFiles"] <- list(NULL)
+  net$blockGenes <- list(1:ncol(datExpr))
+  net$blocks <- rep(1, ncol(datExpr))
+  net$MEsOK <- TRUE
+  net$power <- power
+  if (returnTOM) net$TOM <- TOM
+  return(net)
+}
+
+#' Faster implementation of TOM computation using low-rank SVD
+#' approximation.
+#'
+#' @param A Adjacency matrix.
+#' @param tomtype TOM type (signed/unsigned).
+#' @param lowrank Low-rank approximation dimension.
+#'
+#' @return TOM similarity matrix.
+#'
+#' @keywords internal
+fastTOMsimilarity <- function(A, tomtype = "signed", lowrank = 20) {
+  # https://stackoverflow.com/questions/56574729
+  #
+  # Given square symmetric adjacency matrix A, its possible to
+  # calculate the TOM matrix W without the use of for loops, which
+  # speeds up the process tremendously
+  if (!tomtype %in% c("signed", "unsigned")) {
+    stop("only works for signed and unsigned tomtype")
+  }
+
+  ## Adjacency matrix A can be approximated with SVD. This can make
+  ## TOM calculation much faster.
+  diag(A) <- 0
+  if (lowrank > (ncol(A) / 2)) lowrank <- -1
+  if (lowrank > 0) {
+    res <- try(irlba::irlba(A, nv = lowrank))
+    if (!"try-error" %in% class(res)) {
+      U <- res$u %*% diag(sqrt(res$d))
+      L <- U %*% (Matrix::t(U) %*% U) %*% Matrix::t(U)
+    } else {
+      message("[fastTOMsimilarity] Warning: irlba error. nv = ", lowrank)
+      L <- A %*% A ## full computation
+    }
+  } else {
+    L <- A %*% A
+  }
+  k <- Matrix::colSums(A)
+  Kmat <- outer(k, k, FUN = function(x, y) pmin(x, y))
+  D <- (Kmat + 1 - A)
+  W <- (L + A) / D
+  diag(W) <- 1
+  W <- as.matrix(W)
+  dimnames(W) <- dimnames(A)
+  W <- pmax(W, 0) ## sometimes has negative values...
+  return(W)
+}
+
+
+#' Merge modules with similar eigengenes
+#'
+#' @param datExpr Expression data (samples x genes).
+#' @param colors Module color assignments.
+#' @param cutHeight Cut height for merging.
+#' @param MEs Pre-computed module eigengenes.
+#'
+#' @return List with merged colors and eigengenes.
+#'
+#' @keywords internal
+mergeCloseModules <- function(datExpr, colors, cutHeight, MEs = NULL) {
+  if (is.null(MEs)) {
+    MEs <- WGCNA::moduleEigengenes(datExpr, colors = colors)$eigengenes
+    dim(MEs)
+  }
+  hc <- hclust(as.dist(1 - cor(MEs)), method = "average")
+  idx <- cutree(hc, h = cutHeight)
+  names(idx) <- sub("^ME", "", names(idx))
+  table(idx)
+  new.colors <- colors
+  m <- 2
+  for (m in unique(idx)) {
+    cc <- names(which(idx == m))
+    cc <- setdiff(cc, "grey") ## never merge grey
+    ii <- which(colors %in% cc)
+    new.colors[ii] <- cc[1]
+  }
+  new.MEs <- WGCNA::moduleEigengenes(datExpr, colors = new.colors)$eigengenes
+  list(
+    colors = new.colors,
+    MEs = new.MEs
+  )
+}
+
+#' Merge block dendrograms into single tree
+#'
+#' @param net Network object with dendrograms.
+#' @param X Data matrix for block means.
+#' @param method Merging method (1 or 2).
+#'
+#' @return Merged hclust dendrogram object.
+#'
+#' @keywords internal
+merge_block_dendrograms <- function(net, X, method = 1) {
+  ## This function is fragile: it can give a C stack limit error. In
+  ## case that happens you can increase the stack limit by running on
+  ## the cmd line: >>> ulimit -s unlimited
+  ##
+  hc <- net$dendrograms
+
+  ## merge block dendrogram
+  mx <- list()
+  for (b in 1:length(net$dendrograms)) {
+    ii <- which(net$goodGenes & net$blocks == b)
+    mx[[b]] <- colMeans(X[ii, ])
+    hc[[b]]$labels <- rownames(X)[ii]
+  }
+
+  if (length(hc) == 1) {
+    return(hc[[1]])
+  }
+
+  ## compute parent dendrogram
+  M <- do.call(rbind, mx)
+  hclust_p <- hclust(dist(M), method = "average")
+  dend_p <- as.dendrogram(hclust_p)
+  dend.list <- lapply(hc, as.dendrogram)
+
+  if (method == 1) {
+    merged <- ComplexHeatmap::merge_dendrogram(dend_p, dend.list)
+  } else {
+    mrg <- hclust_p$merge
+    merged_branch <- list()
+    k <- 1
+    for (k in 1:nrow(mrg)) {
+      i <- mrg[k, 1]
+      j <- mrg[k, 2]
+      if (i < 0) d1 <- dend.list[[-i]]
+      if (i > 0) d1 <- merged_branch[[i]]
+      if (j < 0) d2 <- dend.list[[-j]]
+      if (j > 0) d2 <- merged_branch[[j]]
+      merged_branch[[k]] <- merge(d1, d2) ## actual merge
+    }
+    merged <- merged_branch[[k]]
+  }
+
+  merged_hclust <- as.hclust(merged)
+  merged_hclust
+}

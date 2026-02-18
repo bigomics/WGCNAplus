@@ -1,0 +1,45 @@
+Package: WGCNAplus
+Type: Package
+Title: Extended WGCNA for Multi-Omics Data Analysis
+Version: 0.1.0
+Author: BigOmics Analytics SA
+Maintainer: Ivo Kwee <ivo.kwee@bigomics.com>
+Description: Extended Weighted Gene Coexpression Network Analysis (WGCNA)
+    with support for multi-omics, consensus analysis, module preservation,
+    AI-powered module annotation, and comprehensive visualization.
+License: Dual Commercial and Non-Commercial
+Encoding: UTF-8
+RoxygenNote: 7.3.3
+Depends: R (>= 3.5)
+Imports:
+    playbase,
+    WGCNA,
+    Matrix,
+    matrixStats,
+    irlba,
+    igraph,
+    dynamicTreeCut,
+    fgsea,
+    fastcluster,
+    ggplot2,
+    stats,
+    grDevices,
+    graphics,
+    utils,
+    methods
+Suggests:
+    testthat (>= 3.0.0),
+    playdata,
+    plaid,
+    plotly,
+    ComplexHeatmap,
+    ape,
+    uwot,
+    DiagrammeR,
+    DiagrammeRsvg,
+    SuperCell
+Remotes:
+    playbase=url::https://github.com/bigomics/playbase/archive/HEAD.zip,
+    playdata=url::https://github.com/bigomics/playdata/archive/HEAD.zip,
+    plaid=url::https://github.com/bigomics/playdata/archive/HEAD.zip
+Config/testthat/edition: 3
