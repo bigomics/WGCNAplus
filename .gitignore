@@ -1,0 +1,22 @@
+# Emacs backup/lock files
+*~
+\#*\#
+.#*
+
+# R package build artifacts
+*.Rcheck/
+*.tar.gz
+
+# RStudio
+.Rproj.user/
+*.Rproj
+
+# R session
+.Rhistory
+.RData
+.Rdata
+.httr-oauth
+
+# OS files
+.DS_Store
+Thumbs.db
