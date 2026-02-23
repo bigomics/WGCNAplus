@@ -1513,7 +1513,7 @@ mat2gmt <- function(mat) {
 #' @export
 ai.ask <- function(question,
                    model,
-                   engine == "ellmer", "tidyprompt")[2]) {
+                   engine = c("ellmer", "tidyprompt")[2]) {
 
   if (model == "ellmer" && grepl("grok", model)) model <- "tidyprompt"
 
