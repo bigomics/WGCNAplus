@@ -1445,11 +1445,8 @@ gset.rankcor <- function(rnk, gset, compute.p = FALSE, use.rank = TRUE) {
   if (!inherits(gset, "Matrix")) stop("gset must be a matrix")
 
   is.vec <- (NCOL(rnk) == 1 && !any(class(rnk) %in% c("matrix", "Matrix")))
-
   if (is.vec && is.null(names(rnk))) stop("rank vector must be named")
-
   if (!is.vec && is.null(rownames(rnk))) stop("rank matrix must have rownames")
-
   if (is.vec) rnk <- matrix(rnk, ncol = 1, dimnames = list(names(rnk), "rnk"))
 
   n1 <- sum(rownames(rnk) %in% colnames(gset), na.rm = TRUE)
@@ -1469,26 +1466,26 @@ gset.rankcor <- function(rnk, gset, compute.p = FALSE, use.rank = TRUE) {
     }
   }
 
-  ## two cases: (1) in case no missing values, just use corSparse on
-  ## whole matrix. (2) in case the rnk matrix has missing values, we
-  ## must proceed 1-column at time and do reduced corSparse on
-  ## intersection of genes.
+  ## (1) If no missing values: use corSparse on whole matrix.
+  ## (2) If rnk matrix has missing values: proceed 1-column at time
+  ## and do reduced corSparse on intersection of genes.
   rho1 <- cor_sparse_matrix(gset, rnk1)
 
   rownames(rho1) <- colnames(gset)
   colnames(rho1) <- colnames(rnk1)
-  rho1[is.nan(rho1)] <- NA ## ??
+  rho1[is.nan(rho1)] <- NA
 
   .cor.pvalue <- function(x, n) 2 * stats::pnorm(-abs(x / ((1 - x**2) / (n - 2))**0.5))
+
+  df <- list(rho = rho1, p.value = NA, q.value = NA)
   if (compute.p) {
     pv <- apply(rho1, 2, function(x) .cor.pvalue(x, n = nrow(rnk1)))
-    pv[is.nan(pv)] <- NA ## ??
+    pv[is.nan(pv)] <- NA
     qv <- apply(pv, 2, stats::p.adjust, method = "fdr")
-    df <- list(rho = rho1, p.value = pv, q.value = qv)
-  } else {
-    df <- list(rho = rho1, p.value = NA, q.value = NA)
+    df[["p.value"]] <- pv
+    df[["q.value"]] <- qv
   }
-
+  
   return(df)
 
 }
@@ -1508,6 +1505,138 @@ mat2gmt <- function(mat) {
   idx <- Matrix::which(mat != 0, arr.ind = TRUE)
   gmt <- tapply(as.character(rownames(idx)), idx[, 2], list)
   names(gmt) <- colnames(mat)[as.integer(names(gmt))]
+
   return(gmt)
+
+}
+
+#' @export
+ai.ask <- function(question,
+                   model,
+                   engine = c("ellmer", "tidyprompt")[2]) {
+
+  if (model == "ellmer" && grepl("grok", model)) model <- "tidyprompt"
+
+  if (engine == "ellmer") {
+    resp <- ai.ask_ellmer(question = question, model = model, prompt = NULL) 
+  }
+
+  if (engine == "tidyprompt") {
+    resp <- ai.ask_tidyprompt(question = question, model = model) 
+  }
+
+  return(resp)
+
+}
+
+#' @export
+ai.ask_ellmer <- function(question,
+                          model = DEFAULT_LLM,
+                          prompt = NULL) {
+
+  chat <- NULL
+
+  if (inherits(model, "Chat")) {
+    chat <- model
+  } else if (is.character(model)) {
+    if (model %in% OLLAMA_MODELS || grepl("^ollama:", model) ) {
+      model1 <- sub("^ollama:", "", model)
+      chat <- ellmer::chat_ollama(model = model1, system_prompt = prompt)
+    } else if (grepl("^gpt|^openai:",model) && Sys.getenv("OPENAI_API_KEY") != "") {
+      message("warning: using remote GPT model:", model)
+      model1 <- sub("^openai:", "", model)
+      key <- Sys.getenv("OPENAI_API_KEY")
+      chat <- ellmer::chat_openai(model = model1, system_prompt = prompt, api_key = key)
+    } else if (grepl("^grok|^xai:",model) && Sys.getenv("XAI_API_KEY") != "") {
+      model1 <- sub("^xai:","",model)
+      key <- Sys.getenv("XAI_API_KEY")
+      chat <- ellmer::chat_openai(model = model1, system_prompt = prompt,
+        api_key = key, base_url = "https://api.x.ai/v1/")
+    } else if (grepl("^groq:",model) && Sys.getenv("GROQ_API_KEY") != "") {
+      model1 <- sub("groq:", "", model)
+      key <- key Sys.getenv("GROQ_API_KEY")
+      chat <- ellmer::chat_groq(model = model1, system_prompt = prompt,api_key = key)
+    } else if (grepl("^gemini|^google:",model) && Sys.getenv("GEMINI_API_KEY")!="") {
+      model1 <- sub("^google:","",model)
+      key <- Sys.getenv("GEMINI_API_KEY")
+      chat <- ellmer::chat_google_gemini(model = model1, system_prompt = prompt, api_key = key)
+    }
+  }
+
+  if (is.null(chat)) {
+    message("ERROR. could not create model ", model)
+    return(NULL)
+  }
+
+  . <- chat$chat(question, echo = FALSE)
+
+  chat$last_turn()@text
+
+}
+
+ai.ask_tidyprompt <- function(question,
+                              model,
+                              verbose = 0) {
+
+  llm <- NULL
+  if (model %in% OLLAMA_MODELS || grepl("^ollama:", model) ) {
+    model1 <- sub("^ollama:", "", model)
+    prms <- list(model = model1)
+    llm <- tidyprompt::llm_provider_ollama(parameters = prms)
+  } else if (grepl("^remote:", model) ) {
+    remotesrv <- Sys.getenv("OLLAMA_REMOTE")
+    if (remotesrv == "") message("error: please set OLLAMA_REMOTE")
+    if (remotesrv != "") {
+      model1 <- sub("^remote:", "", model)    
+      if (verbose > 0) {
+        message("connecting to remote ollama server = ", remotesrv)
+        message("remote model = ", model1)        
+      }
+      prms <- list(model = model1)
+      url <- paste0("http://", remotesrv, "/api/chat")
+      llm <- tidyprompt::llm_provider_ollama(parameters = prms, url = url)
+    }
+  } else if (grepl("^groq:", model)) {
+    model2 <- sub("groq:", "", model)
+    prms <- list(model = model2)
+    llm <- tidyprompt::llm_provider_groq(parameters = prms)
+  } else if (grepl("^grok|^xai:", model)) {
+    model2 <- sub("^xai:", "", model)
+    prms <- list(model = model2)
+    llm <- tidyprompt::llm_provider_xai(parameters = prms)
+  } else if (grepl("^gpt-|^openai:", model)) {
+    model2 <- sub("^openai:", "", model)
+    prms <- list(model = model2)
+    llm <- tidyprompt::llm_provider_openai(parameters = prms)
+  } else if (grepl("^gemini-|^google:", model)) {
+    model2 <- sub("^google:", "", model)
+    prms <- list(model = model2)
+    key <- Sys.getenv("GEMINI_API_KEY")
+    llm <- tidyprompt::llm_provider_google_gemini(parameters = prms, api_key = key)
+  }
+
+  if (is.null(llm)) {
+    message("warning. unsupported model: ", model)
+    return(NULL)
+  }
+  
+  if (verbose > 0) {
+    message("model = ", model)
+    message("question = ", question)    
+  }
+
+  resp <- NULL
+
+  resp <- question |>
+    tidyprompt::send_prompt(
+      llm_provider = llm,
+      clean_chat_history = TRUE,
+      verbose = FALSE,
+      return_mode = "only_response"
+    )
+
+  resp <- sub("<think>.*</think>", "", resp)
+
+  return(resp)
 
 }
