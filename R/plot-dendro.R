@@ -225,23 +225,23 @@ plotDendroAndColors <- function(wgcna, main=NULL,
 #' @param cex Character expansion factor.
 #' @return NULL (invisible). Generates a plot.
 #' @export
-plotMultiDendroAndColors <- function(wgcna,
-                                     block = 1,
-                                     extra.colors = NULL,
-                                     show.kme = FALSE,
-                                     show.traits = FALSE,
-                                     show.contrasts = FALSE,
-                                     show.mat = NULL,
-                                     clust = TRUE,
-                                     use.tree = 0,
-                                     rm.na = TRUE,
-                                     sd.wt = 0,
-                                     nmax = -1,
-                                     main = 'Dendro and colors',
-                                     colorHeight = 0.5,
-                                     marAll = c(0.4,5,1,0.2),
-                                     cex = 1
-                                     )
+plotMultiDendroAndColors.BAK <- function(wgcna,
+                                         block = 1,
+                                         extra.colors = NULL,
+                                         show.kme = FALSE,
+                                         show.traits = FALSE,
+                                         show.contrasts = FALSE,
+                                         show.mat = NULL,
+                                         clust = TRUE,
+                                         use.tree = 0,
+                                         rm.na = TRUE,
+                                         sd.wt = 0,
+                                         nmax = -1,
+                                         main = 'Dendro and colors',
+                                         colorHeight = 0.5,
+                                         marAll = c(0.4,5,1,0.2),
+                                         cex = 1
+                                         )
 {
 
   layers <- wgcna
@@ -282,160 +282,4 @@ plotMultiDendroAndColors <- function(wgcna,
 }
 
 
-#' plotDendroAndTraits for Consensus output
-#'
-#' @param cons A consensus WGCNA result object.
-#' @param show.traits Show trait correlations.
-#' @param show.contrasts Show contrast correlations.
-#' @param traits Traits to include.
-#' @param main Plot title string.
-#' @param rm.na Remove NA-only columns.
-#' @param use.tree Tree index for consensus.
-#' @param marAll Margin sizes vector.
-#' @param setLayout Whether to set layout.
-#' @param ... Additional arguments passed on.
-#' @return NULL (invisible). Generates a plot.
-plotDendroAndColors_cons <- function(cons,
-                                     show.traits = TRUE,
-                                     show.contrasts = TRUE,
-                                     traits = NULL,
-                                     main = NULL,
-                                     rm.na = TRUE,
-                                     use.tree = 0,
-                                     marAll = c(0.2, 8, 2, 0.2),
-                                     setLayout = TRUE,
-                                     ...) {
-  message("DEPRECATED: please use plotDendroAndColors")
-  
-  if (0) {
-    show.traits <- TRUE
-    traits <- NULL
-    main <- NULL
-    rm.na <- TRUE
-    use.tree <- 0
-    marAll <- c(0.2, 8, 2, 0.2)
-    setLayout <- TRUE
-  }
 
-  ## quick hack to use plotDendroAndColors_multi()
-  multi <- c(list(Consensus = cons), cons$layers)
-  use.tree0 <- use.tree
-  if (use.tree %in% 0:99) use.tree <- as.integer(use.tree)
-  if (is.character(use.tree)) {
-    use.tree <- match(use.tree, names(multi))
-  } else {
-    use.tree <- as.integer(use.tree) + 1
-  }
-  if (is.na(use.tree)) {
-    message("ERROR: invalid class(use.tree) = ", class(use.tree0))
-    message("ERROR: invalid use.tree = ", use.tree0)
-    return(NULL)
-  }
-
-  plotDendroAndColors_multi(
-    multi,
-    show.traits = show.traits,
-    show.contrasts = show.contrasts,
-    traits = traits,
-    main = main,
-    rm.na = rm.na,
-    use.tree = use.tree,
-    marAll = marAll,
-    setLayout = setLayout,
-    ...
-  )
-}
-
-
-#' Plot dendrogram with traits for multiple datasets
-#'
-#' @param multi Named list of WGCNA objects.
-#' @param show.traits Show trait correlations.
-#' @param show.contrasts Show contrast correlations.
-#' @param traits Traits to include.
-#' @param main Plot title string.
-#' @param rm.na Remove NA-only columns.
-#' @param use.tree Which tree layer to use.
-#' @param marAll Margin sizes vector.
-#' @param setLayout Whether to set layout.
-#' @param ... Additional arguments passed on.
-#' @return NULL (invisible). Generates a plot.
-#' @export
-plotDendroAndColors_multi <- function(multi,
-                                      show.traits = TRUE,
-                                      show.contrasts = TRUE,
-                                      traits = NULL,
-                                      main = NULL,
-                                      rm.na = TRUE,
-                                      use.tree = 1,
-                                      marAll = c(0.2, 8, 2, 0.2),
-                                      setLayout = TRUE,
-                                      ...) {
-  message("DEPRECATED: please use plotDendroAndColors")
-
-  ## module colors
-  colors <- sapply(multi, function(m) m$net$colors)
-
-  if (show.traits || show.contrasts) {
-    traitSig <- list()
-    nsets <- length(multi)
-    i <- 1
-    for (k in names(multi)) {
-      if (k == "Consensus") next
-      w <- multi[[k]]
-      Y <- w$datTraits
-      sel1 <- sel2 <- NULL
-      if (show.traits) sel1 <- grep("_vs_", colnames(Y), invert = TRUE)
-      if (show.contrasts) sel2 <- grep("_vs_", colnames(Y))
-      sel <- c(sel1, sel2)
-      if (!is.null(traits)) sel <- intersect(sel, traits)
-      X <- w$datExpr
-      kk <- intersect(rownames(X), rownames(Y))
-      traitSig[[k]] <- cor(X[kk, ], Y[kk, sel], use = "pairwise")
-    }
-
-    if (rm.na) {
-      for (i in 1:length(traitSig)) {
-        sel <- colMeans(is.na(traitSig[[i]])) < 1
-        traitSig[[i]] <- traitSig[[i]][, sel, drop = FALSE]
-      }
-    }
-
-    ## prepend datatype/set name
-    for (k in names(traitSig)) {
-      colnames(traitSig[[k]]) <- paste0(k, ":", colnames(traitSig[[k]]))
-    }
-
-    traitSig2 <- c()
-    for (i in 1:length(traitSig)) {
-      traitSig2 <- cbind(traitSig2, traitSig[[i]])
-      if (i < length(traitSig)) traitSig2 <- cbind(traitSig2, 0)
-    }
-    traitColors <- rho2bluered(traitSig2, f = 0.95, a = 0.8)
-    ii <- which(colnames(traitColors) == "")
-    if (length(ii)) traitColors[, ii] <- "#FFFFFF"
-    if (is.null(colors)) {
-      colors <- traitColors
-    } else {
-      colors <- cbind(colors, 0, traitColors)
-    }
-  }
-
-  message("using tree of layer: ", names(multi)[use.tree])
-  geneTree <- multi[[use.tree]]$net$dendrograms[[1]]
-
-  if (is.null(main)) main <- "Gene Dendrogram, Modules and Trait Correlation"
-
-  WGCNA::plotDendroAndColors(
-    geneTree,
-    colors = colors,
-    colnames(colors),
-    dendroLabels = FALSE,
-    hang = 0.03,
-    addGuide = TRUE,
-    guideHang = 0.05,
-    marAll = marAll,
-    main = main,
-    ...
-  )
-}

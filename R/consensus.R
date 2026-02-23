@@ -35,38 +35,38 @@
 #'
 #' @export
 runConsensusWGCNA <- function(exprList,
-                                    phenoData,
-                                    contrasts = NULL,
-                                    GMT = NULL,
-                                    annot = NULL,
-                                    ngenes = 2000,
-                                    power = 12,
-                                    minModuleSize = 20,
-                                    minKME = 0.3,
-                                    mergeCutHeight = 0.15,
-                                    deepSplit = 2,
-                                    maxBlockSize = 9999,
-                                    addCombined = FALSE,
-                                    calcMethod = "fast",
-                                    drop.ref = FALSE,
-                                    cons.psig = 0.05,
-                                    compute.stats = TRUE,
-                                    compute.enrichment = TRUE,
-                                    summary = TRUE,
-                                    ai_model = getOption("WGCNAplus.default_llm"),
-                                    experiment = "",
-                                    gsea.mingenes = 10,
-                                    gsea.ntop = 1000,
-                                    gset.methods = c("fisher", "gsetcor", "xcor"),
-                                    verbose = 1,
-                                    progress = NULL) {
+                              phenoData,
+                              contrasts = NULL,
+                              GMT = NULL,
+                              annot = NULL,
+                              ngenes = 2000,
+                              power = 12,
+                              minModuleSize = 20,
+                              minKME = 0.3,
+                              mergeCutHeight = 0.15,
+                              deepSplit = 2,
+                              maxBlockSize = 9999,
+                              addCombined = FALSE,
+                              calcMethod = "fast",
+                              drop.ref = FALSE,
+                              cons.psig = 0.05,
+                              compute.stats = TRUE,
+                              compute.enrichment = TRUE,
+                              summary = TRUE,
+                              ai_model = getOption("WGCNAplus.default_llm"),
+                              experiment = "",
+                              gsea.mingenes = 10,
+                              gsea.ntop = 1000,
+                              gset.methods = c("fisher", "gsetcor", "xcor"),
+                              verbose = 1,
+                              progress = NULL) {
   ## if(0) {
   ##   power=6;minKME=0.5;cutheight=0.15;deepSplit=2;maxBlockSize=5000;verbose=1;calcMethod="fast";addCombined=0;ngenes=2000;minModuleSize=20;mergeCutHeight=0.15
   ##   gsea.mingenes=20;gset.methods = c("fisher","gsetcor","xcor")
   ## }
 
   colors <- NULL
-
+  
   ## Align and reduce matrices if needed
   gg <- Reduce(intersect, lapply(exprList, rownames))
   exprList <- lapply(exprList, function(x) x[gg, , drop = FALSE])
@@ -203,7 +203,7 @@ runConsensusWGCNA <- function(exprList,
   ydim <- sapply(exprList, ncol)
   consZ <- computeConsensusMatrix(zlist, ydim = ydim, psig = cons.psig)
   avgZ <- Reduce("+", zlist) / length(zlist)
-
+  
   ## add slots
   datExpr <- lapply(exprList, Matrix::t)
 
@@ -228,18 +228,10 @@ runConsensusWGCNA <- function(exprList,
   }
 
   ## run enrichment
-  if(compute.enrichment) {
+  if(compute.enrichment && !is.null(GMT)) {
     if(!is.null(progress)) progress$inc(0.2, "Computing enrichment...")
     message("[runConsensusWGCNA] >>> computing module enrichment...")
-    if(!is.null(GMT)) {
-      GMT0 <- getPlaydataGMT()
-      if(!is.null(annot)) GMT0 <- rename_by2(GMT0, annot, "symbol")
-      GMT <-  merge_sparse_matrix(GMT, GMT0)
-      remove(GMT0)
-    } else {
-      GMT <- getPlaydataGMT()
-      if(!is.null(annot)) GMT <- rename_by2(GMT, annot, "symbol")
-    }
+    if(!is.null(annot)) GMT <- rename_by2(GMT, annot, "symbol")
     res$gsea <- computeConsensusModuleEnrichment(
       res,
       GMT = GMT,
@@ -260,7 +252,7 @@ runConsensusWGCNA <- function(exprList,
       model = ai_model,
       annot = annot,
       experiment = experiment,
-      verbose = 0
+      verbose = FALSE
     )
     res$summary <- ai$answers
     res$prompts <- ai$questions
@@ -610,11 +602,11 @@ computeDistinctMatrix <- function(matlist, ydim, psig = 0.05, min.diff = 0.3,
 #' terms.
 #'
 computeConsensusModuleEnrichment <- function(cons,
-                                                   GMT,
-                                                   annot,
-                                                   methods = c("fisher","gsetcor","xcor"),
-                                                   min.genes = 3,
-                                                   ntop = 400 )
+                                             GMT,
+                                             annot,
+                                             methods = c("fisher","gsetcor","xcor"),
+                                             min.genes = 3,
+                                             ntop = 400 )
 {
   if(0) {
     methods = c("fisher","gsetcor","xcor")

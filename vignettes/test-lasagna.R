@@ -20,10 +20,10 @@ pgx <- playbase::pgx.load("~/ClientData/bruker/klidel-mox/klidel-multiomics.pgx"
 pgx <- playbase::pgx.load("~/Playground/omicsplayground/data/mox-brca.pgx")
 pgx <- playbase::pgx.load("~/Playground/omicsplayground/data/mox-geiger.pgx")
 
-write.csv( pgx$X, file="brca/expression.csv")
-write.csv( pgx$samples, file="brca/samples.csv")
-write.csv( pgx$contrasts, file="brca/contrasts.csv")
-
+write.csv(pgx$X, file="brca/expression.csv")
+write.csv(pgx$samples, file="brca/samples.csv")
+write.csv(pgx$contrasts, file="brca/contrasts.csv")
+save(pgx$GMT, file="brca/gmt.rda")
 pgx <- playbase::pgx.initialize(pgx)
 
 annot <- pgx$genes
@@ -44,8 +44,7 @@ tail(rownames(GMT))
 ## full WGCNA on features
 wgcna <- computeWGCNA_multiomics(
   dataX, pgx$samples, GMT=GMT, 
-  power="iqr", minmodsize=3,
-  minKME=0.3,
+  power="iqr", minmodsize=3, minKME=0.3,
   mergeCutHeight=0.3  ## seems better than 0.15
 )
 wgcna$me.genes

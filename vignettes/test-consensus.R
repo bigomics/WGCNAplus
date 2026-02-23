@@ -150,11 +150,10 @@ tZ <- Reduce('+', lapply(lapply(cons$zlist,t),dist))
 ii <- hclust(Z)$order
 jj <- hclust(tZ)$order
 
-par(mfrow=c(2,3), mar=c(12,12,5,1), cex=1.2)
-par(mfrow=c(2,3), mar=c(8,12,3,1), cex=1.2)
+par(mfrow=c(2,3), mar=c(8,12,3,1), cex=0.8)
 for(i in 1:length(cons$zlist)) {
   k <- names(cons$zlist)[i]
-  wgcna.plotLabeledCorrelationHeatmap(
+  plotLabeledCorrelationHeatmap(
     cons$zlist[[i]][ii,jj], cons$ydim[i], cex.lab = 1.2,
     pstar=1, text=FALSE, cluster=FALSE, setpar=FALSE,
     main = paste("module-trait for",toupper(k)))
@@ -163,20 +162,20 @@ for(i in 1:length(cons$zlist)) {
 ## Consensus Module-Trait
 matlist = cons$zlist
 ydim <- sapply(cons$datExpr, nrow)
-consZ <- wgcna.computeConsensusMatrix(cons$zlist, ydim=ydim, psig=0.05) 
+consZ <- computeConsensusMatrix(cons$zlist, ydim=ydim, psig=0.05) 
 nsamples <- ncol(xx[[1]])
-wgcna.plotLabeledCorrelationHeatmap(
+plotLabeledCorrelationHeatmap(
   consZ[ii,jj], nsamples, setpar=FALSE,
   text=FALSE, pstar=1, cluster=FALSE, cex.lab=1.2,
   main = "consensus Module-Trait"
 )
 
 ## Distinct Module-Trait
-diffZ <- wgcna.computeDistinctMatrix(
+diffZ <- computeDistinctMatrix(
   matlist, ydim=ydim, psig = 0.05, min.diff=0.1) 
 names(diffZ)
 for(set in names(diffZ)) {
-  wgcna.plotLabeledCorrelationHeatmap(
+  plotLabeledCorrelationHeatmap(
     diffZ[[set]][ii,jj], nsamples, setpar=FALSE,
     text=FALSE, pstar=1, cluster=FALSE, cex.lab=1.2,
     main = paste("unique Module-Traits for",toupper(set))
@@ -200,7 +199,6 @@ wgcna.plotLabeledCorrelationHeatmap(
 #----------------------------------------------------------------
 #  Conservation/Preservation Summary plot (nice plot!)
 #----------------------------------------------------------------
-source("~/Playground/playbase/dev/include.R", chdir=TRUE)
 
 MEs <- cons$net$multiMEs
 lapply(MEs, function(m) dim(m$data))
@@ -209,7 +207,7 @@ modules <- colnames(MEs[[1]]$data)
 par(mfrow=c(2,1), mar=c(12,4,2,2))
 for(k in names(MEs)) {
   ME <- MEs[[k]]$data
-  wgcna.plotEigenGeneClusterDendrogram(
+  plotEigenGeneClusterDendrogram(
     wgcna=NULL, ME=ME, main = k,
     setMargins=FALSE, method="hclust")
 }

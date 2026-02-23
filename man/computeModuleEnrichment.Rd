@@ -16,7 +16,8 @@ computeModuleEnrichment(
   xref = NULL,
   min.genes = 3,
   min.rho = 0.8,
-  filter = NULL
+  filter = NULL,
+  add.wgcna = TRUE
 )
 }
 \description{

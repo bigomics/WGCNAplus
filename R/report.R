@@ -180,6 +180,12 @@ Format like a scientific article, use prose as much as possible, minimize the us
 getTopTables <- function(wgcna, annot=NULL, module=NULL,
                          psig=0.05, ntop=40, level=NULL,
                          rename="symbol") {
+
+  if(0) {
+    ntop=50; psig = 0.05; annot=NULL; multi=FALSE; modules=NULL;
+    experiment=""; verbose=1; model=getOption("WGCNAplus.default_llm");
+    docstyle = "detailed summary"; numpar = 2; level="gene"
+  }
   
   if("layers" %in% names(wgcna)) {
     layers <- wgcna$layers
@@ -246,14 +252,21 @@ getTopTables <- function(wgcna, annot=NULL, module=NULL,
 getTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, ntop=40,
                                psig = 0.05, level="gene", rename="symbol") {
 
+  if(0) {
+    k=1
+    wgcna=layers[[k]];  module=NULL;  annot=pgx$genes;
+    ntop=ntop; psig=0.05; level=level[[k]]; rename="symbol"
+  }
+  
   if("layers" %in% names(wgcna) && class(wgcna$datExpr) == "list") {
+    message("[getTopGenesAndSets] multilayer object...")
     cons <- .getConsensusTopGenesAndSets(wgcna, annot=annot,
       module=module,  ntop=ntop, rename=rename)
     return(cons)
   }
 
   stats <- NULL
-  if(!"stats" %in% names(wgcna)) {
+  if(!"stats" %in% names(wgcna) || is.null(wgcna$stats) ) {
     stats <- computeGeneStats(wgcna$net, wgcna$datExpr, wgcna$datTraits,
       wgcna$svTOM)
   } else {
@@ -403,7 +416,15 @@ describeModules <- function(wgcna, ntop=50, psig = 0.05,
                             model=getOption("WGCNAplus.default_llm"),
                             docstyle = "detailed summary", numpar = 2,
                             level="gene")  {
-
+  if(0) {
+    ntop=50; psig = 0.05;
+    annot=NULL; multi=FALSE; modules=NULL;
+    experiment=""; verbose=1; 
+    model=getOption("WGCNAplus.default_llm");
+    docstyle = "detailed summary"; numpar = 2;
+    level="gene"
+  }
+  
   if(is.null(annot)) {
     message("[describeModules] WARNING. user annot table is recommended.")
   }

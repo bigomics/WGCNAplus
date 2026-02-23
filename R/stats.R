@@ -116,19 +116,23 @@ computeGeneStats <- function(net, datExpr, datTraits, TOM) {
   foldChangePvalue <- cbind(foldChangePvalue, foldChangePvalue.cont)
 
   ## Gene Centrality. Compute centrality of gene in Module subgraph
-  ## using TOM matrix.
+  ## using TOM matrix. WARNING: this can create large TOM matrix
   geneCentrality <- NULL
   if (!is.null(TOM)) {
-    if (is.null(dimnames(TOM))) dimnames(TOM) <- list(colnames(datExpr), colnames(datExpr))
-    adj <- TOM
-    diag(adj) <- 0
-    adj[which(abs(adj) < 0.01)] <- 0
+    if(nrow(TOM) != ncol(TOM)) {
+      TOM <- TOM %*% Matrix::t(TOM)
+    }
+    if (is.null(dimnames(TOM))) {
+      dimnames(TOM) <- list(colnames(datExpr), colnames(datExpr))
+    }
+    diag(TOM) <- 0
+    TOM[which(abs(TOM) < 0.01)] <- 0
     gr <- igraph::graph_from_adjacency_matrix(
-      adj,
+      TOM,
       mode = "undirected", weighted = TRUE, diag = FALSE
     )
-    geneCentrality <- rep(NA, nrow(adj))
-    names(geneCentrality) <- rownames(adj)
+    geneCentrality <- rep(NA, nrow(TOM))
+    names(geneCentrality) <- rownames(TOM)
     me.genes <- tapply(names(net$colors), net$colors, list)
     for (gg in me.genes) {
       gr1 <- igraph::subgraph(gr, gg)

@@ -2,20 +2,37 @@
 % Please edit documentation in R/plot-module.R
 \name{plotModuleScores}
 \alias{plotModuleScores}
-\title{Plot top modules most correlated with trait for multi expression
-data.}
+\title{Plot top modules most correlated with trait (unified).}
 \usage{
 plotModuleScores(
   res,
   trait,
-  multi = FALSE,
   nmax = 16,
-  collapse.trait = FALSE,
-  plotlib = "base",
-  setpar = TRUE
+  collapse = FALSE,
+  setpar = TRUE,
+  cex = 1
 )
 }
+\arguments{
+\item{res}{A WGCNA or multi-WGCNA result object.}
+
+\item{trait}{Trait name to plot.}
+
+\item{nmax}{Maximum number of modules to plot.}
+
+\item{collapse}{If TRUE, collapse trait matrix (multi only).}
+
+\item{setpar}{Set par layout: TRUE/1 for portrait, 2 for landscape, FALSE for none.}
+
+\item{cex}{Character expansion factor.}
+
+\item{multi}{If TRUE, treat \code{res} as a multi-dataset object.}
+}
+\value{
+NULL (invisible). Generates a plot.
+}
 \description{
-Plot top modules most correlated with trait for multi expression
-data.
+Works with both single-dataset and multi-dataset objects.
+When \code{multi = TRUE}, the object is expected to have a list of
+ME matrices in \code{res$MEs} and trait data are merged across datasets.
 }

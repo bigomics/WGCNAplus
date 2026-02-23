@@ -16,19 +16,22 @@
 #' @param gset.methods Enrichment methods to use.
 #' @return Preservation result object with Z-summary.
 runPreservationWGCNA <- function(exprList,
-                                       phenoData,
-                                       contrasts = NULL,
-                                       power = 12,
-                                       reference = 1,
-                                       add.merged = FALSE,
-                                       ngenes = 2000,
-                                       minModuleSize = 20,
-                                       deepSplit = 2,
-                                       annot = NULL,
-                                       compute.stats = TRUE,
-                                       compute.enrichment = TRUE,
-                                       GMT = NULL,
-                                       gset.methods = c("fisher", "gsetcor", "xcor")) {
+                                 phenoData,
+                                 contrasts = NULL,
+                                 power = 12,
+                                 reference = 1,
+                                 add.merged = FALSE,
+                                 ngenes = 2000,
+                                 minModuleSize = 20,
+                                 deepSplit = 2,
+                                 annot = NULL,
+                                 compute.stats = TRUE,
+                                 compute.enrichment = TRUE,
+                                 GMT = NULL,
+                                 gset.methods = c("fisher", "gsetcor", "xcor"),
+                                 ai_model = "",
+                                 summary = FALSE
+                                 ) {
   if (is.character(reference)) {
     reference <- match(reference, names(exprList))
   }
@@ -44,7 +47,7 @@ runPreservationWGCNA <- function(exprList,
     phenoData = phenoData,
     contrasts = contrasts,
     GMT = NULL, ## no enrichment now
-    annot = NULL, ## no enrichment now
+    annot = annot, 
     ngenes = ngenes,
     power = power,
     minModuleSize = minModuleSize,
@@ -58,7 +61,9 @@ runPreservationWGCNA <- function(exprList,
     compute.stats = FALSE,
     compute.enrichment = FALSE,
     gsea.mingenes = 10,
-    gset.methods = gset.methods
+    gset.methods = NULL,
+    ai_model = ai_model,
+    summary = summary
   )
 
   colorList <- lapply(pres$layers, function(w) w$net$colors)
@@ -140,18 +145,11 @@ runPreservationWGCNA <- function(exprList,
   }
 
   ## geneset enrichment of reference layer
-  if (compute.enrichment) {
+  if (compute.enrichment && !is.null(GMT)) {
     message("[runPreservationWGCNA] computing geneset enrichment...")
-    if(!is.null(GMT)) {
-      GMT0 <- getPlaydataGMT()
-      if(!is.null(annot)) GMT0 <- rename_by2(GMT0, annot, "human_ortholog")
-      GMT <-  merge_sparse_matrix(GMT, GMT0)
-      remove(GMT0)
-    } else {
-      GMT <- getPlaydataGMT()
-      if(!is.null(annot)) GMT <- rename_by2(GMT, annot, "human_ortholog")
+    if(!is.null(annot)) {
+      GMT <- rename_by2(GMT, annot, "human_ortholog")
     }
-
     ## we should check here if GMT and X overlap....
     pres$gsea <- computeModuleEnrichment(
       pres$layers[[ref]],
@@ -160,7 +158,8 @@ runPreservationWGCNA <- function(exprList,
       methods = gset.methods,
       ntop = 1000,
       xtop = 100,
-      filter = NULL
+      filter = NULL,
+      add.wgcna = FALSE
     )
   }
 

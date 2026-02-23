@@ -5,7 +5,7 @@
 \title{Plot dendrograms for multiple WGCNA objects}
 \usage{
 plotMultiDendroAndColors(
-  multi_wgcna,
+  wgcna,
   block = 1,
   extra.colors = NULL,
   show.kme = FALSE,
@@ -17,15 +17,13 @@ plotMultiDendroAndColors(
   rm.na = TRUE,
   sd.wt = 0,
   nmax = -1,
-  main = NULL,
+  main = "Dendro and colors",
   colorHeight = 0.5,
   marAll = c(0.4, 5, 1, 0.2),
   cex = 1
 )
 }
 \arguments{
-\item{multi_wgcna}{Named list of WGCNA objects.}
-
 \item{block}{Block number to plot.}
 
 \item{extra.colors}{Additional color rows to display.}
@@ -55,6 +53,8 @@ plotMultiDendroAndColors(
 \item{marAll}{Margin sizes vector.}
 
 \item{cex}{Character expansion factor.}
+
+\item{multi_wgcna}{Named list of WGCNA objects.}
 }
 \value{
 NULL (invisible). Generates a plot.
