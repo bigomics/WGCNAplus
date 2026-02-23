@@ -1513,17 +1513,15 @@ mat2gmt <- function(mat) {
 #' @export
 ai.ask <- function(question,
                    model,
-                   engine = c("ellmer", "tidyprompt")[2]) {
+                   engine == "ellmer", "tidyprompt")[2]) {
 
   if (model == "ellmer" && grepl("grok", model)) model <- "tidyprompt"
 
-  if (engine == "ellmer") {
+  if (engine == "ellmer")
     resp <- ai.ask_ellmer(question = question, model = model, prompt = NULL) 
-  }
 
-  if (engine == "tidyprompt") {
+  if (engine == "tidyprompt")
     resp <- ai.ask_tidyprompt(question = question, model = model) 
-  }
 
   return(resp)
 
@@ -1556,7 +1554,7 @@ ai.ask_ellmer <- function(question,
       model1 <- sub("groq:", "", model)
       key <- key Sys.getenv("GROQ_API_KEY")
       chat <- ellmer::chat_groq(model = model1, system_prompt = prompt,api_key = key)
-    } else if (grepl("^gemini|^google:",model) && Sys.getenv("GEMINI_API_KEY")!="") {
+    } else if (grepl("^gemini|^google:",model) && Sys.getenv("GEMINI_API_KEY") != "") {
       model1 <- sub("^google:","",model)
       key <- Sys.getenv("GEMINI_API_KEY")
       chat <- ellmer::chat_google_gemini(model = model1, system_prompt = prompt, api_key = key)
@@ -1622,7 +1620,7 @@ ai.ask_tidyprompt <- function(question,
   
   if (verbose > 0) {
     message("model = ", model)
-    message("question = ", question)    
+    message("question = ", question)
   }
 
   resp <- NULL
@@ -1638,5 +1636,103 @@ ai.ask_tidyprompt <- function(question,
   resp <- sub("<think>.*</think>", "", resp)
 
   return(resp)
+
+}
+
+#' Generate image with Gemini (aka Nano Banana). Note this model
+#' handles very large prompts correctly.
+#' @export
+ai.create_image_gemini <- function(prompt,
+                                   model = "gemini-2.5-flash-image",
+                                   api_key = Sys.getenv("GEMINI_API_KEY"),
+                                   format = c("file","base64","raw")[1], 
+                                   filename = "image.png",
+                                   aspectRatio = "16:9",
+                                   imageSize = "1K",
+                                   base_url = "https://generativelanguage.googleapis.com/v1beta") {
+
+  assertthat::assert_that(assertthat::is.string(prompt), assertthat::noNA(prompt))
+  assertthat::assert_that(assertthat::is.string(model), assertthat::noNA(model))
+  assertthat::assert_that(assertthat::is.string(api_key), assertthat::noNA(api_key))
+  require(dplyr)
+  
+  if (nchar(api_key) == 0) {
+    stop("GEMINI_API_KEY environment variable is not set", call. = FALSE)
+  }
+
+  message("calling gemini image generation...")
+  model <- sub("^google:", "", model)
+  url <- glue::glue("{base_url}/models/{model}:generateContent")
+
+  headers <- c(`x-goog-api-key` = api_key, `Content-Type` = "application/json")
+
+  body <- list(
+    contents = list(list(parts = list(list(text = prompt)))),
+    generationConfig = list(
+      responseModalities = list("TEXT", "IMAGE"),
+      imageConfig =  list(aspectRatio = aspectRatio, imageSize = imageSize)      
+    )
+  )
+
+  if (grepl("gemini-2.5",model)) {
+    body$generationConfig$imageConfig <- list(aspectRatio = aspectRatio)
+  }
+  
+  response <- httr::POST(
+    url = url,
+    httr::add_headers(.headers = headers),
+    body = jsonlite::toJSON(body, auto_unbox = TRUE),
+    encode = "raw"
+  )
+
+  httr::http_type(response)
+  if (httr::http_type(response) != "application/json") {
+    stop("Gemini API returned unexpected content type", call. = FALSE)
+  }
+
+  parsed <- response %>%
+    httr::content(as = "text", encoding = "UTF-8") %>%
+    jsonlite::fromJSON(flatten = TRUE)
+
+  httr::http_error(response)
+  if (httr::http_error(response)) {
+    error_msg <- if (!is.null(parsed$error$message)) parsed$error$message else "Unknown error"
+    stop(paste0("Gemini API request failed [", httr::status_code(response), "]: ", error_msg), call. = FALSE)
+  }
+  
+  parts <- parsed$candidates$content.parts  
+  b64 <- NULL
+  mimetype <- NULL
+  for (part in parts) {
+    if (!is.null(part$inlineData.data)) {
+      b64 <- part$inlineData.data
+      b64 <- head(b64[!is.na(b64)],1)
+      mimetype <- part$inlineData.mimeType
+      mimetype <- head(mimetype[!is.na(mimetype)],1)
+      break()
+    }
+  }
+  
+  if (is.null(b64) || length(b64)==0) stop("No image data found in response")
+
+  if (format == "file") {
+    raw_image <- base64enc::base64decode(b64)    
+    filetype <- sub("jpeg", "jpg", sub("image/","",mimetype))
+    filename2 <- paste0(sub("[.].*$", "", filename), ".", filetype)
+    writeBin(raw_image, filename2)
+    message("Saved image to: ", filename2)
+    return(invisible(filename2))
+  }
+
+  if (format == "raw") {
+    raw_image <- base64enc::base64decode(b64)    
+    return(invisible(raw_image))
+  }
+
+  if (format == "base64") {
+    return(invisible(b64))
+  }
+
+  stop("return error")
 
 }
