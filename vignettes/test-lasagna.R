@@ -16,7 +16,6 @@ lasagna.multisolve <- playbase::lasagna.multisolve
 ## Compute multi-omics
 ##--------------------------------------------------------------------
 
-pgx <- playbase::pgx.load("~/ClientData/bruker/klidel-mox/klidel-multiomics.pgx")
 pgx <- playbase::pgx.load("~/Playground/omicsplayground/data/mox-brca.pgx")
 pgx <- playbase::pgx.load("~/Playground/omicsplayground/data/mox-geiger.pgx")
 
