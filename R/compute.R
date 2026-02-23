@@ -1,6 +1,5 @@
 
 #' Run main WGCNA computation pipeline
-#'
 #' @param X Gene expression matrix (genes x samples).
 #' @param samples Sample metadata data frame.
 #' @param contrasts Optional contrast matrix.
@@ -28,9 +27,7 @@
 #' @param net Pre-computed network object.
 #' @param is.multiomics Force multi-omics mode.
 #' @param verbose Verbosity level.
-#'
 #' @return List with WGCNA results.
-#'
 #' @export
 computeWGCNA <- function(X,
                          samples,
@@ -59,6 +56,7 @@ computeWGCNA <- function(X,
                          net = NULL,
                          is.multiomics = NULL,
                          verbose = 0) {
+
   if (0) {
     ngenes <- 2000
     minmodsize <- 20
@@ -85,10 +83,6 @@ computeWGCNA <- function(X,
     is.multiomics <- NULL
     verbose <- 0
   }
-
-  ## if (nchar(prefix) != 2) {
-  ##   stop("prefix must be two capital letters")
-  ## }
 
   kk <- intersect(colnames(X), rownames(samples))
   X <- as.matrix(X[, kk])
