@@ -1,5 +1,4 @@
 #' Run module preservation analysis across datasets
-#'
 #' @param exprList Named list of expression matrices.
 #' @param phenoData Sample phenotype data frame.
 #' @param contrasts Contrast definitions or NULL.
@@ -30,11 +29,12 @@ runPreservationWGCNA <- function(exprList,
                                  GMT = NULL,
                                  gset.methods = c("fisher", "gsetcor", "xcor"),
                                  ai_model = "",
-                                 summary = FALSE
-                                 ) {
+                                 summary = FALSE) {
+
   if (is.character(reference)) {
     reference <- match(reference, names(exprList))
   }
+
   if (reference > 0) {
     reference.name <- names(exprList)[reference]
   } else {
@@ -121,36 +121,30 @@ runPreservationWGCNA <- function(exprList,
 
   ## Compute module-trait correlation matrices
   Y <- lapply(pres$layers, function(w) w$datTraits)
-  names(Y)
   if ("Merged" %in% names(MEx) && !"Merged" %in% names(Y)) {
     kk <- rownames(MEx[["Merged"]])
     Y[["Merged"]] <- pres$datTraits[kk, ]
     Y <- Y[names(MEx)]
   }
+
   kk <- Reduce(union, lapply(Y, colnames))
   Y <- lapply(Y, function(y) y[, match(kk, colnames(y)), drop = FALSE])
   for (i in 1:length(Y)) colnames(Y[[i]]) <- kk
+
   R <- mapply(cor, MEx, Y, use = "pairwise", SIMPLIFY = FALSE)
-  ## for(i in 1:length(R)) colnames(R[[i]]) <- paste0(names(R)[i],":",colnames(R[[i]]))
 
   ## gene statistics of reference layer
   if (compute.stats) {
     message("[runPreservationWGCNA] computing gene statistics...")
     ref <- reference.name
     wnet <- list(MEs = MEx[[ref]], colors = pres$colors[, ref])
-    pres$stats <- computeGeneStats(wnet, pres$datExpr[[ref]],
-      pres$datTraits,
-      TOM = NULL
-    )
+    pres$stats <- computeGeneStats(wnet, pres$datExpr[[ref]], pres$datTraits, TOM = NULL)
   }
 
   ## geneset enrichment of reference layer
   if (compute.enrichment && !is.null(GMT)) {
     message("[runPreservationWGCNA] computing geneset enrichment...")
-    if(!is.null(annot)) {
-      GMT <- rename_by2(GMT, annot, "human_ortholog")
-    }
-    ## we should check here if GMT and X overlap....
+    if(!is.null(annot)) GMT <- rename_by2(GMT, annot, "human_ortholog")
     pres$gsea <- computeModuleEnrichment(
       pres$layers[[ref]],
       GMT = GMT,
@@ -171,4 +165,5 @@ runPreservationWGCNA <- function(exprList,
   pres$MEs <- MEx
 
   return(pres)
+
 }
