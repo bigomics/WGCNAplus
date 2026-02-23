@@ -1493,3 +1493,21 @@ gset.rankcor <- function(rnk, gset, compute.p = FALSE, use.rank = TRUE) {
 
 }
 
+
+#' Convert binary matrix to GMT list
+#' This function converts binary matrix to a GMT (Gene Matrix
+#' Transposed) list, The binary matrix indicates presence or absence of
+#' genes in each gene set: rows are genes and columns are gene sets.
+#' @param mat Matrix with non-zero entries representing genes in
+#'   each gene set where rows are genes and columns are  gene sets.
+#' @return List of vector representing each gene set. Each list
+#'   element correspond to a gene set and is a vector of genes
+#'@export
+mat2gmt <- function(mat) {
+
+  idx <- Matrix::which(mat != 0, arr.ind = TRUE)
+  gmt <- tapply(as.character(rownames(idx)), idx[, 2], list)
+  names(gmt) <- colnames(mat)[as.integer(names(gmt))]
+  return(gmt)
+
+}
