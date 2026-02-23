@@ -1,15 +1,13 @@
 library(devtools)
 
 ## Imports
-gset.rankcor <- playbase::gset.rankcor
-mat2gmt <- playbase::mat2gmt
-##mofa.merge_data2 <- playbase::mofa.merge_data2
-ai.ask <- playbase::ai.ask
-ai.create_image_gemini <- playbase::ai.create_image_gemini
+## gset.rankcor <- playbase::gset.rankcor
+## mat2gmt <- playbase::mat2gmt
+## mofa.merge_data2 <- playbase::mofa.merge_data2
+## ai.ask <- playbase::ai.ask
+## ai.create_image_gemini <- playbase::ai.create_image_gemini
 
-##------------------------------------------------------------
 ## Run Consensus WGCNA
-##------------------------------------------------------------
 load_all()
 
 pgx <- playbase::pgx.load("~/Playground/omicsplayground/data/multi-liver.pgx")
