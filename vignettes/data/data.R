@@ -20,8 +20,8 @@ pgx <- playbase::pgx.load("~/Playground/omicsplayground/data/mox-brca.pgx")
 write.csv(pgx$X, file="brca/expression.csv")
 write.csv(pgx$samples, file="brca/samples.csv")
 write.csv(pgx$contrasts, file="brca/contrasts.csv")
-save(pgx$GMT, file="brca/gmt.rda")
-
+GMT <- pgx$GMT
+save(GMT, file="brca/gmt.rda")
 
 pgx <- playbase::pgx.load("~/Playground/omicsplayground/data/mox-geiger.pgx")
 write.csv(pgx$X, file="geiger/expression.csv")
