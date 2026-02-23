@@ -3,7 +3,6 @@
 ## =========================================================================
 
 #' Run consensus WGCNA across multiple datasets
-#'
 #' @param exprList List of expression matrices.
 #' @param phenoData Sample phenotype data frame.
 #' @param contrasts Optional contrast matrix.
@@ -30,9 +29,7 @@
 #' @param gset.methods Enrichment methods to use.
 #' @param verbose Verbosity level.
 #' @param progress Optional progress callback.
-#'
 #' @return List with consensus WGCNA results.
-#'
 #' @export
 runConsensusWGCNA <- function(exprList,
                               phenoData,
@@ -60,11 +57,7 @@ runConsensusWGCNA <- function(exprList,
                               gset.methods = c("fisher", "gsetcor", "xcor"),
                               verbose = 1,
                               progress = NULL) {
-  ## if(0) {
-  ##   power=6;minKME=0.5;cutheight=0.15;deepSplit=2;maxBlockSize=5000;verbose=1;calcMethod="fast";addCombined=0;ngenes=2000;minModuleSize=20;mergeCutHeight=0.15
-  ##   gsea.mingenes=20;gset.methods = c("fisher","gsetcor","xcor")
-  ## }
-
+  
   colors <- NULL
   
   ## Align and reduce matrices if needed
@@ -118,7 +111,7 @@ runConsensusWGCNA <- function(exprList,
     )
   }
 
-  # now we run automatic consensus module detection
+  # Run automatic consensus module detection
   message("[runConsensusWGCNA] >>> computing CONSENSUS modules...")
   if (!is.null(progress)) progress$inc(0.1, "Computing consensus...")
   consensusPower <- unlist(sapply(layers, function(w) w$net$power))
@@ -162,7 +155,7 @@ runConsensusWGCNA <- function(exprList,
     cons$dendrograms[[i]]$labels <- xnames[ii]
   }
 
-  ## merge dendrograms ????
+  ## merge dendrograms
   message("[runConsensusWGCNA] merge_block_dendrograms...")
   multiX <- Matrix::t(do.call(rbind, lapply(exprList, function(x) scale(t(x)))))
   merged <- try(merge_block_dendrograms(cons, multiX))
@@ -189,7 +182,6 @@ runConsensusWGCNA <- function(exprList,
   }
 
   zlist <- list()
-  k <- 1
   for (k in names(cons$multiME)) {
     M <- (cons$multiME[[k]][[1]])
     Z <- datTraits
@@ -258,12 +250,12 @@ runConsensusWGCNA <- function(exprList,
     res$prompts <- ai$questions
   }
 
-  res
+  return(res)
+
 }
 
 
 #' Create aligned consensus WGCNA layers
-#'
 #' @param exprList List of expression matrices.
 #' @param samples Sample metadata data frame.
 #' @param contrasts Optional contrast matrix.
@@ -276,9 +268,7 @@ runConsensusWGCNA <- function(exprList,
 #' @param maxBlockSize Maximum block size for computation.
 #' @param prefix Layer name prefixes.
 #' @param verbose Verbosity level.
-#'
 #' @return List of aligned WGCNA layer results.
-#'
 #' @export
 createConsensusLayers <- function(exprList,
                                         samples,
@@ -292,23 +282,12 @@ createConsensusLayers <- function(exprList,
                                         maxBlockSize = 9999,
                                         prefix = NULL,
                                         verbose = 1) {
-  if (0) {
-    ngenes <- 2000
-    power <- 12
-    minModuleSize <- 5
-    deepSplit <- 2
-    mergeCutHeight <- 0.15
-    minKME <- 0.3
-    maxBlockSize <- 9999
-    verbose <- 1
-    prefix <- NULL
-  }
 
+  
   if (is.null(prefix)) prefix <- names(exprList)
   nx <- length(exprList)
   prefix <- head(rep(prefix, nx), nx)
 
-  ## reduce
   message("[computeConsensusLayers] Aligning matrices...")
   gg <- Reduce(intersect, lapply(exprList, rownames))
   exprList <- lapply(exprList, function(x) x[gg, ])
@@ -319,6 +298,7 @@ createConsensusLayers <- function(exprList,
     ii <- head(order(-sdx), ngenes)
     exprList <- lapply(exprList, function(x) x[ii, ])
   }
+
   multiExpr <- WGCNA::list2multiData(lapply(exprList, Matrix::t))
 
   ## determine power vector
@@ -328,7 +308,6 @@ createConsensusLayers <- function(exprList,
     power <- power[1]
     message("[createConsensusLayers] optimal power method = ", power)
     est.power <- rep(NA, length(exprList))
-    i <- 1
     for (i in 1:length(exprList)) {
       p <- pickSoftThreshold(
         Matrix::t(exprList[[i]]),
@@ -338,7 +317,6 @@ createConsensusLayers <- function(exprList,
       if (length(p) == 0 || is.null(p)) p <- NA
       est.power[i] <- p
     }
-    est.power
     power <- ifelse(is.na(est.power), 12, est.power)
   } else {
     power <- as.numeric(power)
@@ -364,10 +342,8 @@ createConsensusLayers <- function(exprList,
     verbose = verbose
   )
 
-  ##
   message("[computeConsensusLayers] Creating consensus layers...")
   aligned <- list()
-  i <- 1
   for (i in 1:length(exprList)) {
     k <- names(exprList)[i]
     sel <- c(
@@ -391,15 +367,13 @@ createConsensusLayers <- function(exprList,
   }
 
   return(aligned)
+
 }
 
 #' Match module colors to reference labels
-#'
 #' @param wgcna WGCNA result object.
 #' @param refcolors Reference color assignments.
-#'
 #' @return Updated WGCNA object with matched colors.
-#'
 #' @export
 #' @keywords internal
 matchColors <- function(wgcna, refcolors) {
@@ -446,24 +420,26 @@ matchColors <- function(wgcna, refcolors) {
     colnames(wgcna$stats[['moduleMembership']]) <- newcol(colnames(wgcna$stats[['moduleMembership']]))
     colnames(wgcna$stats[['MMPvalue']]) <- newcol(colnames(wgcna$stats[['MMPvalue']]))
   }
+
   return(wgcna)
+
 }
 
 #' Get top correlated genes across modules
-#'
 #' @param wgcna WGCNA result object or list.
 #' @param ref Reference layer name.
 #' @param ngenes Number of top genes per module.
 #' @param multi Use multi-layer mode.
 #' @param modules Subset of modules to query.
-#'
 #' @return List of data frames with cross-module genes.
-#'
 #' @export
 #' @keywords internal
-getModuleCrossGenes <-  function(wgcna, ref=NULL, ngenes = 100,
-                                       multi=TRUE, modules=NULL)
-{
+getModuleCrossGenes <-  function(wgcna,
+                                 ref = NULL,
+                                 ngenes = 100,
+                                 multi = TRUE,
+                                 modules = NULL) {
+
 
   if(!multi) {
     wgcna <- list(gx = wgcna)
@@ -495,24 +471,27 @@ getModuleCrossGenes <-  function(wgcna, ref=NULL, ngenes = 100,
     nbx.list[[k]] <- data.frame( gene = gene, rho = rho, module = me)
   }
 
-  ##if(length(nbx.list)==1) nbx.list <- nbx.list[[1]]
   return(nbx.list)
+
 }
 
 #' Compute consensus matrix from list of matrices. The consensus
 #' matrix checks for consistent sign and minimal threshold for each
 #' matrix. Optionally filters on consistent p-value.
-#'
 #' @param ydim original dimension of data
-#'
-#'
 #' @export
 #' @keywords internal
-computeConsensusMatrix <- function(matlist, ydim, psig = 0.05, consfun = "min") {
+computeConsensusMatrix <- function(matlist,
+                                   ydim,
+                                   psig = 0.05,
+                                   consfun = "min") {
+
   if (length(ydim) == 1) ydim <- rep(ydim[1], length(matlist))
+
   pv <- mapply(function(z, n) {
     WGCNA::corPvalueStudent(z, n)
   }, matlist, ydim, SIMPLIFY = FALSE)
+
   for (i in 1:length(pv)) pv[[i]][is.na(pv[[i]])] <- 1 ## missing???
 
   ## create consensus module-trait matrix
@@ -520,19 +499,14 @@ computeConsensusMatrix <- function(matlist, ydim, psig = 0.05, consfun = "min") 
   for (i in 1:length(matlist)) {
     matsign[[i]] <- sign(matlist[[i]]) * (pv[[i]] <= psig)
   }
-  matsign <- lapply(matsign, function(x) {
-    x[is.na(x)] <- 0
-    x
-  })
+  matsign <- lapply(matsign, function(x) { x[is.na(x)] <- 0; x})
+
   all.pos <- Reduce("*", lapply(matsign, function(z) (z >= 0)))
   all.neg <- Reduce("*", lapply(matsign, function(z) (z <= 0)))
   concordant <- (all.pos | all.neg)
 
   matlistN <- Reduce("+", lapply(matlist, function(x) !is.na(x)))
-  matlist0 <- lapply(matlist, function(x) {
-    x[is.na(x)] <- 0
-    x
-  })
+  matlist0 <- lapply(matlist, function(x) { x[is.na(x)] <- 0; x})
 
   zsign <- sign(Reduce("+", matsign)) ## mean sign??
   if (consfun == "min") {
@@ -554,28 +528,33 @@ computeConsensusMatrix <- function(matlist, ydim, psig = 0.05, consfun = "min") 
   consZ[!concordant] <- NA
 
   if (psig < 1) {
-    ## enforce strong consensus. All layers must be strictly
-    ## significant.
+    ## enforce strong consensus. All layers must be strictly significant.
     all.sig <- Reduce("*", lapply(pv, function(p) 1 * (p <= psig)))
     consZ[!all.sig] <- NA
   }
+
   return(consZ)
+
 }
 
 #' Compute consensus matrix from list of matrices. The consensus
 #' matrix checks for consistent sign and minimal threshold for each
 #' matrix. Optionally filters on consistent p-value.
-#'
 #' @export
 #' @keywords internal
-computeDistinctMatrix <- function(matlist, ydim, psig = 0.05, min.diff = 0.3,
-                                        consmax = 0) {
+computeDistinctMatrix <- function(matlist,
+                                  ydim,
+                                  psig = 0.05,
+                                  min.diff = 0.3,
+                                  consmax = 0) {
+
   ## create difference module-trait matrix
   pv <- mapply(function(z, n) WGCNA::corPvalueStudent(z, n),
     matlist, ydim, SIMPLIFY = FALSE)
-  matsign <- lapply( matlist, sign )
+
+  matsign <- lapply(matlist, sign)
+
   Q <- matlist
-  i <- 1
   for (i in 1:length(matlist)) {
     ## Any entry not significant is anyway invalid
     notsig <- (pv[[i]] > psig)
@@ -595,26 +574,18 @@ computeDistinctMatrix <- function(matlist, ydim, psig = 0.05, min.diff = 0.3,
     cons <- (Reduce("+", cons) > consmax) ## or function
     Q[[i]][cons] <- NA
   }
+
   return(Q)
+
 }
 
-#' Compute consensus enrichment by calculating overlapping enriched
-#' terms.
-#'
+#' Compute consensus enrichment by calculating overlapping enriched terms.
 computeConsensusModuleEnrichment <- function(cons,
                                              GMT,
                                              annot,
                                              methods = c("fisher","gsetcor","xcor"),
                                              min.genes = 3,
-                                             ntop = 400 )
-{
-  if(0) {
-    methods = c("fisher","gsetcor","xcor")
-    min.genes = 3
-    ntop = 400
-    annot = NULL
-    GMT <- Matrix::t(playdata::GSETxGENE)
-  }
+                                             ntop = 400) {
 
   if(is.null(GMT)) {
     message("ERROR: must provide GMT")
@@ -622,35 +593,34 @@ computeConsensusModuleEnrichment <- function(cons,
   }
 
   gseaX <- list()
-  i=1
   for(i in 1:length(cons$datExpr)) {
 
     geneX <- t(cons$datExpr[[i]])
-    dim(geneX)
 
     ## Rename everything to symbols
     if(!is.null(annot)) {
       geneX <- rename_by2(geneX, annot, "symbol")
       GMT   <- rename_by2(GMT, annot, "symbol")
     }
+
     ng <- length(intersect(rownames(geneX), rownames(GMT)))
     if(ng == 0) {
       message("[computeConsensusModuleEnrichment] ERROR. No symbol overlap.")
       return(NULL)
     }
+
     symbols <- intersect(rownames(GMT),rownames(geneX))
     message("[computeConsensusModuleEnrichment] number of symbols: ", length(symbols))
-    geneX <- geneX[symbols,]
-    GMT <- GMT[symbols,]
+    geneX <- geneX[symbols, ]
+    GMT <- GMT[symbols, ]
 
     ## select on minimum gene sets size
-    sel <- which( Matrix::colSums(GMT!=0) >= min.genes )
-    GMT <- GMT[,sel]
+    sel <- which(Matrix::colSums(GMT!=0) >= min.genes)
+    GMT <- GMT[, sel]
 
     ## Create extended Eigengene matrix (ME). ME should be nicely
     ## normalized/scaled so we just rbind across datasets
     ME <- cons$net$multiMEs[[i]]$data
-    dim(ME)
 
     ## get genes in modules
     me.genes <- tapply(names(cons$net$colors), cons$net$colors, list)
@@ -659,22 +629,15 @@ computeConsensusModuleEnrichment <- function(cons,
       me.genes <- lapply(me.genes, function(gg) probe2symbol(gg, annot))
     }
     me.genes <- lapply(me.genes, function(g) intersect(g, symbols))
-    rownames(ME)
     colnames(geneX) <- rownames(ME)
 
     k <- names(cons$datExpr)[i]
-    gseaX[[k]] <- run_enrichment_methods(
-      ME,
-      me.genes = me.genes,
-      GMT= GMT,
-      geneX = geneX,
-      methods = methods,
-      min.genes = min.genes,
-      ntop = ntop)
+    gseaX[[k]] <- run_enrichment_methods(ME, me.genes = me.genes,
+      GMT= GMT, geneX = geneX, methods = methods,
+      min.genes = min.genes, ntop = ntop)
   }
 
   cons.gsea <- list()
-  m=1
   for(m in names(gseaX[[1]])) {
     xx <- lapply( gseaX, function(g) g[[m]] )
     sel <- Reduce(intersect, lapply(xx, rownames))
@@ -702,10 +665,10 @@ computeConsensusModuleEnrichment <- function(cons,
         xx.pvalue
       )
       df <- df[order(df$p.value),]
-      #df <- df[!duplicated(df$geneset),,drop=FALSE]
       cons.gsea[[m]] <- df
     }
   }
 
   return(cons.gsea)
+
 }
