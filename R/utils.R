@@ -1,71 +1,77 @@
 #' Purple-grey-yellow color palette
-#'
 #' @param n Number of colors to generate.
 #' @return Character vector of hex colors.
 #' @keywords internal
 purpleGreyYellow <- function(n) {
+
   colorRampPalette(c("purple", "grey65", "yellow"))(n)
+
 }
 
 #' Convert correlation to blue-red colors
-#'
 #' Converts correlation values [-1;1] to blue-white-red colors. Good
 #' for creating color labels for labeledHeatmaps that expect colors.
 #' NOTE: use WGCNA::numbers2colors???
-#'
 #' @param R Numeric correlation matrix or vector.
 #' @param a Exponent for nonlinear scaling.
 #' @param f Color attenuation factor.
 #' @return Character matrix or vector of colors.
 #' @keywords internal
 rho2bluered <- function(R, a = 1, f = 0.95) {
+
   BLUERED <- WGCNA::blueWhiteRed(100)
+
   if (a != 1) R <- sign(R) * abs(R)**a
+
   if (is.null(ncol(R))) {
     col <- BLUERED[1 + round(99 * (1 + R) / 2)]
   } else {
     col <- apply(R, 2, function(x) BLUERED[1 + round(99 * (1 + x) / 2)])
     dimnames(col) <- dimnames(R)
   }
+
   if (f < 1) {
     col <- apply(col, 2, adjustcolor, red.f = f, green.f = f, blue.f = f)
   }
+
   if (NCOL(col) == 1) col <- cbind(col)
   dimnames(col) <- dimnames(R)
-  col
+
+  return(col)
+
 }
 
 
 #' Convert numeric labels to colors
-#'
 #' Converts WGCNA labels (numeric or color) to colors.
-#'
 #' @param colors Numeric or character label vector.
 #' @param ... Additional arguments passed to WGCNA::labels2colors.
 #' @return Character vector of color names.
 #' @export
 labels2colors <- function(colors, ...) {
+
   if (all(is.numeric(colors))) {
     colors <- WGCNA::labels2colors(colors, ...)
     return(colors)
   }
+
   stdColors <- c("grey", WGCNA::standardColors())
-  if (all(colors %in% stdColors)) {
-    return(colors)
-  }
+
+  if (all(colors %in% stdColors)) return(colors)
+
   icolors <- as.integer(factor(as.character(colors)))
   colors <- WGCNA::standardColors()[icolors]
+
   return(colors)
+
 }
 
 
 #' Filter module colors by KME
-#'
 #' Filter color vector by minimum KME and mergeCutHeight. Set color of
 #' features with KME smaller than minKME to grey (or 0) group. Merge
 #' similar modules with (module) correlation larger than
 #' (1-mergeCutHeight) together.
-#'
 #' @param X Numeric expression matrix.
 #' @param colors Module color assignments.
 #' @param minKME Minimum KME threshold.
@@ -74,9 +80,12 @@ labels2colors <- function(colors, ...) {
 #' @param ntop Maximum features per module.
 #' @return Filtered color assignment vector.
 #' @export
-filterColors <- function(X, colors, minKME = 0.3, mergeCutHeight = 0.15,
-                               minmodsize = 20, ntop = -1) {
-  ## minKME=0.3;mergeCutHeight=0.15;minmodsize=20;ntop=-1
+filterColors <- function(X,
+                         colors,
+                         minKME = 0.3,
+                         mergeCutHeight = 0.15,
+                         minmodsize = 20,
+                         ntop = -1) {
 
   sX <- X + 1e-8 * matrix(rnorm(length(X)), nrow(X), ncol(X))
   sX <- t(scale(t(sX)))
@@ -101,19 +110,16 @@ filterColors <- function(X, colors, minKME = 0.3, mergeCutHeight = 0.15,
     grey.val <- "---"
     if (is.color) grey.val <- "grey"
   }
+
   names(colors) <- rownames(X)
   new.colors <- colors
 
   if (minKME > 0) {
-    i <- 1
     for (i in 1:length(vv)) {
       ii <- which(colors == names(vv)[i])
       r <- cor(t(X[ii, ]), vv[[i]])[, 1]
-      max(r)
       jj <- ii[which(r < minKME)]
-      if (length(jj)) {
-        new.colors[jj] <- NA
-      }
+      if (length(jj)) new.colors[jj] <- NA
       kme[ii] <- r
     }
     new.colors[is.na(new.colors)] <- grey.val
@@ -126,7 +132,6 @@ filterColors <- function(X, colors, minKME = 0.3, mergeCutHeight = 0.15,
     diag(rr) <- 0
     merge.idx <- which(rr > (1 - mergeCutHeight), arr.ind = TRUE)
     if (nrow(merge.idx) > 0) {
-      i <- 1
       for (i in 1:nrow(merge.idx)) {
         aa <- rownames(rr)[merge.idx[i, ]]
         jj <- which(new.colors %in% aa)
@@ -138,7 +143,6 @@ filterColors <- function(X, colors, minKME = 0.3, mergeCutHeight = 0.15,
 
   ## remove small groups
   modsize <- table(new.colors)
-  modsize
   if (min(modsize) < minmodsize) {
     small.mod <- names(which(modsize < minmodsize))
     sel <- which(new.colors %in% small.mod)
@@ -154,71 +158,73 @@ filterColors <- function(X, colors, minKME = 0.3, mergeCutHeight = 0.15,
   }
 
   new.colors[which(is.na(new.colors))] <- grey.val
-  ## if(!is.numeric(colors)) new.colors <- factor(new.colors)
 
   return(new.colors)
+
 }
 
 #' TOM-based hierarchical clustering
-#'
 #' Wrapper to hclust from matrix using default WGCNA parameters.
-#'
 #' @param X Numeric expression matrix.
 #' @param power Soft-thresholding power.
 #' @return An hclust dendrogram object.
 #' @keywords internal
 tomclust <- function(X, power = 6) {
+
   A <- WGCNA::adjacency(t(X), power = power, type = "signed")
   TOM <- fastTOMsimilarity(A, tomtype = "signed", lowrank = 40)
   hc <- hclust(as.dist(1 - TOM), method = "average")
-  hc
+  return(hc)
+
 }
 
 
 #' Validate dendrogram heights across powers
-#'
 #' @param datExpr Numeric expression data matrix.
 #' @param n Number of top-variance features to sample.
 #' @param powers Numeric vector of powers to test.
 #' @param maxpower Maximum power to evaluate.
 #' @return List with quantiles, IQR, and optimal power.
 #' @keywords internal
-checkDendroHeights <- function(datExpr, n = 200, powers = NULL, maxpower = 20) {
+checkDendroHeights <- function(datExpr,
+                               n = 200,
+                               powers = NULL,
+                               maxpower = 20) {
+
   ii <- 1:ncol(datExpr)
   if (n < ncol(datExpr)) {
-    ## ii <- sample(1:ncol(datExpr), n)
     ii <- head(order(-matrixStats::colSds(datExpr)), n)
   }
+
   tX <- datExpr[, ii]
   ht <- list()
   p <- 9
   p <- 24
+
   if (is.null(powers)) {
     powers <- c(c(1:10), seq(from = 12, to = 20, by = 2))
     if (maxpower > 20) {
       powers <- c(powers, seq(from = 20, to = maxpower, by = 5))
     }
   }
+
   for (i in 1:length(powers)) {
     A <- WGCNA::adjacency(tX, power = powers[i], type = "signed")
     TOM <- fastTOMsimilarity(A, tomtype = "signed", lowrank = 40)
     hc <- hclust(as.dist(1 - TOM), method = "average")
     ht[[i]] <- hc$height
   }
+
   names(ht) <- paste0("p=", powers)
   S <- sapply(ht, quantile, probs = c(0.25, 0.5, 0.75))
   iqr <- (S[3, ] - S[1, ])
   optK <- powers[which.max(iqr)]
 
-  list(
-    quantiles = S,
-    IQR = iqr,
-    optK = optK
-  )
+  return(list(quantiles = S, IQR = iqr, optK = optK))
+  
 }
 
 #' Plot soft threshold power analysis
-#'
 #' @param datExpr Numeric expression data matrix.
 #' @param networktype Network type (e.g. "signed").
 #' @param cex Text size for plot labels.
@@ -230,13 +236,19 @@ checkDendroHeights <- function(datExpr, n = 200, powers = NULL, maxpower = 20) {
 #' @param setPar Whether to set par layout.
 #' @return Invisibly NULL. Plots are drawn.
 #' @export
-plotPowerAnalysis <- function(datExpr, networktype = "signed",
-                                    cex = 1, maxpower = 20, nmax = 2000,
-                                    plots = c(
-                                      "sft.modelfit", "mean.k",
-                                      "dendro.IQR"
-                                    ), main = NULL,
-                                    RsquaredCut = 0.85, setPar = TRUE) {
+plotPowerAnalysis <- function(datExpr,
+                              networktype = "signed",
+                              cex = 1,
+                              maxpower = 20,
+                              nmax = 2000,
+                              plots = c(
+                                "sft.modelfit", "mean.k",
+                                "dendro.IQR"
+                              ),
+                              main = NULL,
+                              RsquaredCut = 0.85,
+                              setPar = TRUE) {
+
   RsquaredCut <- RsquaredCut[1]
 
   ## Choose a set of soft-thresholding powers
@@ -252,15 +264,8 @@ plotPowerAnalysis <- function(datExpr, networktype = "signed",
   }
 
   ## Call the network topology analysis function
-  sft <- WGCNA::pickSoftThreshold(
-    datExpr,
-    powerVector = powers,
-    RsquaredCut = RsquaredCut,
-    networkType = networktype,
-    verbose = 0
-  )
-
-  ## This is more robust
+  sft <- WGCNA::pickSoftThreshold(datExpr, powerVector = powers,
+    RsquaredCut = RsquaredCut, networkType = networktype, verbose = 0)
 
   if (setPar) {
     np <- length(plots)
@@ -269,9 +274,9 @@ plotPowerAnalysis <- function(datExpr, networktype = "signed",
     par(mfrow = c(1, np), mar = c(3.8, 3.8, 1, 1), mgp = c(2.4, 0.95, 0))
   }
 
-  ## Plot the results:
+  ## Plot results
   if ("sft.modelfit" %in% plots) {
-    ## Scale-free topology fit index as a function of the soft-thresholding power
+    ## Scale-free topology fit index as function of soft-thresholding power
     y <- -sign(sft$fitIndices[, 3]) * sft$fitIndices[, 2]
     base::plot(
       x = sft$fitIndices[, 1],
@@ -288,7 +293,6 @@ plotPowerAnalysis <- function(datExpr, networktype = "signed",
     )
     ## this line corresponds to using an R^2 cut-off of h
     abline(h = RsquaredCut, col = "red", lty = 2)
-    ## if(legend) legend("bottomright", legend=paste("opt. power =",optPower))
   }
 
   ## Mean connectivity as a function of the soft-thresholding power
@@ -300,9 +304,7 @@ plotPowerAnalysis <- function(datExpr, networktype = "signed",
       main = main
     )
     text(sft$fitIndices[, "Power"], sft$fitIndices[, "mean.k."],
-      labels = powers,
-      cex = cex, col = "red"
-    )
+      labels = powers, cex = cex, col = "red")
   }
 
   ht <- NULL
@@ -315,15 +317,12 @@ plotPowerAnalysis <- function(datExpr, networktype = "signed",
       ylab = "Dendrogram height IQR",
       main = main
     )
-    text(sft$fitIndices[, 1], ht$IQR,
-      labels = powers,
-      cex = cex, col = "red"
-    )
+    text(sft$fitIndices[, 1], ht$IQR, labels = powers, cex = cex, col = "red")
   }
+
 }
 
 #' Multi-dataset power analysis plot
-#'
 #' @param exprList Named list of expression matrices.
 #' @param cex Text size for plot labels.
 #' @param maxpower Maximum power to evaluate.
@@ -337,26 +336,17 @@ plotPowerAnalysis <- function(datExpr, networktype = "signed",
 #' @return Invisibly NULL. Plots are drawn.
 #' @export
 plotPowerAnalysis_multi <- function(exprList,
-                                          cex = 1, maxpower = 20,
-                                          nmax = 2000,
-                                          networktype = "signed",
-                                          plots = c(
-                                            "sft.modelfit", "mean.k",
-                                            "dendro.IQR"
-                                          ),
-                                          main = NULL,
-                                          cex.legend = 1,
-                                          RsquaredCut = 0.85,
-                                          setPar = TRUE) {
-  if (0) {
-    networktype <- "signed"
-    cex <- 1
-    maxpower <- 20
-    nmax <- 2000
-    plots <- c("sft.modelfit", "mean.k", "dendro.IQR")
-    main <- NULL
-    RsquaredCut <- 0.85
-  }
+                                    cex = 1, maxpower = 20,
+                                    nmax = 2000,
+                                    networktype = "signed",
+                                    plots = c(
+                                      "sft.modelfit", "mean.k",
+                                      "dendro.IQR"
+                                    ),
+                                    main = NULL,
+                                    cex.legend = 1,
+                                    RsquaredCut = 0.85,
+                                    setPar = TRUE) {
 
   RsquaredCut <- RsquaredCut[1]
 
@@ -393,9 +383,9 @@ plotPowerAnalysis_multi <- function(exprList,
     par(mfrow = c(1, np), mar = c(3.8, 4.5, 3, 1), mgp = c(2.6, 0.95, 0))
   }
 
-  ## Plot the results:
+  ## Plot results:
   if ("sft.modelfit" %in% plots) {
-    ## Scale-free topology fit index as a function of the soft-thresholding power
+    ## Scale-free topology fit index as function of soft-thresholding power
     Y <- c()
     for (i in 1:length(sft)) {
       y1 <- -sign(sft[[i]]$fitIndices[, "slope"]) * sft[[i]]$fitIndices[, "SFT.R.sq"]
@@ -416,17 +406,16 @@ plotPowerAnalysis_multi <- function(exprList,
       ylab = "SFT model fit (signed R^2)",
       main = main
     )
-    # abline(h = 0, col = "black", lty=1)
+
     for (i in 1:ncol(Y)) {
       text(powers, Y[, i], labels = "\u2588", cex = cex, col = "white")
       text(powers, Y[, i], labels = powers, cex = cex, col = 1 + i)
     }
+
     ## this line corresponds to using an R^2 cut-off of h
     abline(h = RsquaredCut, col = "grey10", lty = 2)
-    legend("bottomright",
-      legend = colnames(Y), fill = 2:10,
-      cex = cex.legend, y.intersp = 0.9
-    )
+    legend("bottomright", legend = colnames(Y), fill = 2:10,
+      cex = cex.legend, y.intersp = 0.9)
     title("SFT model fit")
   }
 
@@ -476,23 +465,22 @@ plotPowerAnalysis_multi <- function(exprList,
       ylab = "Dendrogram height IQR",
       main = main
     )
+
     for (i in 1:ncol(Y)) {
       text(powers, Y[, i], labels = "\u2588", cex = cex, col = "white")
       text(powers, Y[, i], labels = powers, cex = cex, col = 1 + i)
     }
-    legend("bottomright",
-      legend = names(exprList), fill = 2:10,
-      cex = cex.legend, y.intersp = 0.9
-    )
+
+    legend("bottomright", legend = names(exprList),
+      fill = 2:10, cex = cex.legend, y.intersp = 0.9)
     title("Dendrogram IQR")
   }
+
 }
 
 
 #' Pick soft thresholding power
-#'
 #' Better (?) method to pick soft threshold (aka power).
-#'
 #' @param datExpr Numeric expression data matrix.
 #' @param sft Pre-computed soft threshold result.
 #' @param rcut R-squared cutoff for model fit.
@@ -502,13 +490,16 @@ plotPowerAnalysis_multi <- function(exprList,
 #' @param verbose Verbosity level.
 #' @return Integer optimal soft-thresholding power.
 #' @export
-pickSoftThreshold <- function(datExpr, sft = NULL, rcut = 0.85,
-                                    method = c("sft", "iqr")[1],
-                                    nmax = -1, powers = NULL,
-                                    verbose = 1) {
+pickSoftThreshold <- function(datExpr,
+                              sft = NULL,
+                              rcut = 0.85,
+                              method = c("sft", "iqr")[1],
+                              nmax = -1,
+                              powers = NULL,
+                              verbose = 1) {
+
   if (is.null(powers)) {
     powers <- c(c(1:10), seq(from = 12, to = 20, by = 2))
-    # powers <- c(powers, seq(from = 25, to = 50, by = 5))
   }
 
   ## subsample for speed
@@ -518,12 +509,8 @@ pickSoftThreshold <- function(datExpr, sft = NULL, rcut = 0.85,
   }
 
   if (is.null(sft)) {
-    sft <- WGCNA::pickSoftThreshold(
-      datExpr,
-      powerVector = powers,
-      networkType = "signed",
-      verbose = verbose
-    )
+    sft <- WGCNA::pickSoftThreshold(datExpr, powerVector = powers,
+      networkType = "signed", verbose = verbose)
   }
 
   optPower <- NULL
@@ -545,9 +532,7 @@ pickSoftThreshold <- function(datExpr, sft = NULL, rcut = 0.85,
       optPower <- powers[which.max(sqr)]
     }
   } else if (method == "iqr") {
-    ## Pick power according to IQR
     ht <- checkDendroHeights(datExpr, n = 200, powers = powers)
-    ## base::plot( powers, ht$IQR)
     optPower <- powers[which.max(ht$IQR)]
   } else {
     stop("[pickSoftThreshold] invalid method = ", method)
@@ -557,63 +542,74 @@ pickSoftThreshold <- function(datExpr, sft = NULL, rcut = 0.85,
     message("[pickSoftThreshold] sft$powerEstimate = ", sft$powerEstimate)
     message("[pickSoftThreshold] optPower = ", optPower)
   }
-  optPower
+
+  return(optPower)
+
 }
 
 
 #' Scale TOM matrices to equal quantiles
-#'
 #' Scale a list of TOM matrices so that the quantiles (default p=0.95)
 #' are equal after scaling with respect to the first TOM matrix.
-#'
 #' @param TOMs List of TOM matrices.
 #' @param scaleP Reference quantile for scaling.
 #' @return List of scaled TOM matrices.
 #' @keywords internal
 scaleTOMs <- function(TOMs, scaleP = 0.95) {
+
   nGenes <- nrow(TOMs[[1]])
+
   nSets <- length(TOMs)
+
   # Sample sufficiently large number of TOM entries
   nSamples <- as.integer(1 / (1 - scaleP) * 1000)
+
   # Choose the sampled TOM entries
   scaleSample <- sample(nGenes * (nGenes - 1) / 2, size = nSamples)
+
   TOMScalingSamples <- list()
+
   # These are TOM values at reference percentile
   scaleQuant <- rep(1, nSets)
+
   # Scaling powers to equalize reference TOM values
   scalePowers <- rep(1, nSets)
+
   # Loop over sets
   set <- 1
-  for (set in 1:nSets)
-  {
+  for (set in 1:nSets) {
     # Select the sampled TOM entries
     tval <- as.dist(TOMs[[set]])[scaleSample]
     # Calculate the 95th percentile
     scaleQuant[set] <- quantile(tval, probs = scaleP, type = 8)
     TOMScalingSamples[[set]] <- tval
-
     # Scale the TOM
     if (set > 1) {
       scalePowers[set] <- log(scaleQuant[1]) / log(scaleQuant[set])
       TOMs[[set]] <- TOMs[[set]]^scalePowers[set]
     }
   }
+
   return(TOMs)
+
 }
 
 #' Get module-trait correlation data
-#'
 #' @param wgcna A WGCNA result object.
 #' @return Numeric module-trait correlation matrix.
 #' @keywords internal
 get_modTraits <- function(wgcna) {
+
   if(!is.null(wgcna$modTraits)) {
     M <- wgcna$modTraits
   } else {
     M <- cor( wgcna$net$MEs, wgcna$datTraits, use="pairwise")
   }
+
   M[is.na(M)] <- 0
+
   return(M)
+
 }
 
 
@@ -622,11 +618,11 @@ get_modTraits <- function(wgcna) {
 ## =========================================================================
 
 #' Check if value is a Date
-#'
 #' @param x Value to test.
 #' @return Logical TRUE if Date parseable.
 #' @keywords internal
 is.Date <- function(x) {
+
   if (!all(is.na(as.Date(
     as.character(x),
     format = c("%d/%m/%Y", "%d-%m-%Y", "%Y/%m/%d", "%Y-%m-%d")
@@ -635,6 +631,7 @@ is.Date <- function(x) {
   } else {
     return(FALSE)
   }
+
 }
 
 #' Collapse expanded trait matrix
@@ -643,13 +640,16 @@ is.Date <- function(x) {
 #' @return Collapsed matrix with category columns.
 #' @keywords internal
 collapseTraitMatrix <- function(Y) {
+
   if (sum(grepl("=", colnames(Y))) < 2) {
     return(Y)
   }
+
   is.cat <- grepl("=", colnames(Y))
   M <- Y[, which(!is.cat), drop = FALSE]
   categories <- unique(sub("=.*", "", colnames(Y)[which(is.cat)]))
   y <- categories[1]
+
   for (y in categories) {
     ii <- which(sub("=.*", "", colnames(Y)) == y)
     Y1 <- Y[, ii]
@@ -658,23 +658,29 @@ collapseTraitMatrix <- function(Y) {
     M <- cbind(M, m1)
     colnames(M)[ncol(M)] <- y
   }
+
   return(M)
+
 }
 
 #' Log counts per million normalization
-#'
 #' @param counts Count matrix (dense or sparse).
 #' @param total Library size normalization target.
 #' @param prior Pseudocount before log transform.
 #' @param log Whether to log2-transform.
 #' @return Normalized expression matrix.
 #' @keywords internal
-logCPM <- function(counts, total = 1e6, prior = 1, log = TRUE) {
+logCPM <- function(counts,
+                   total = 1e6,
+                   prior = 1,
+                   log = TRUE) {
+
   if (is.null(total)) {
     total0 <- mean(Matrix::colSums(counts, na.rm = TRUE))
     total <- ifelse(total0 < 1e6, total0, 1e6)
     message("[logCPM] setting column sums to = ", round(total, 2))
   }
+
   if (any(class(counts) == "dgCMatrix")) {
     cpm <- counts
     cpm[is.na(cpm)] <- 0
@@ -687,14 +693,15 @@ logCPM <- function(counts, total = 1e6, prior = 1, log = TRUE) {
     if (log) cpm <- log2(prior + cpm)
     return(cpm)
   }
+
 }
 
 #' Make contrast matrix from label matrix
-#'
 #' @param lab.matrix Label matrix with "_vs_" column names.
 #' @return Numeric contrast matrix.
 #' @keywords internal
 makeContrastsFromLabelMatrix <- function(lab.matrix) {
+
   if (!all(grepl("_vs_", colnames(lab.matrix)))) {
     stop("[makeContrastsFromLabelMatrix] FATAL:: all contrast names must include _vs_")
   }
@@ -724,68 +731,78 @@ makeContrastsFromLabelMatrix <- function(lab.matrix) {
   }
 
   return(contr.mat)
+
 }
 
 #' Column-bind sparse matrices
-#'
 #' @param m1 First sparse matrix.
 #' @param m2 Second sparse matrix.
 #' @return Combined sparse matrix.
 #' @keywords internal
 cbind_sparse_matrix <- function(m1, m2) {
+
   gene_vector <- unique(c(rownames(m1), rownames(m2)))
+
   if (!all(gene_vector %in% rownames(m1))) {
     missing_genes_m1 <- setdiff(gene_vector, rownames(m1))
     zero_rows_m1 <- Matrix::Matrix(0, nrow = length(missing_genes_m1), ncol = ncol(m1), sparse = TRUE)
     rownames(zero_rows_m1) <- missing_genes_m1
     m1 <- rbind(m1, zero_rows_m1)
   }
+
   if (!all(gene_vector %in% rownames(m2))) {
     missing_genes_m2 <- setdiff(gene_vector, rownames(m2))
     zero_rows_m2 <- Matrix::Matrix(0, nrow = length(missing_genes_m2), ncol = ncol(m2), sparse = TRUE)
     rownames(zero_rows_m2) <- missing_genes_m2
     m2 <- rbind(m2, zero_rows_m2)
   }
+
   m1 <- m1[gene_vector, , drop = FALSE]
   m2 <- m2[gene_vector, , drop = FALSE]
   combined_gmt <- cbind(m1, m2)
   combined_gmt <- combined_gmt[, order(-Matrix::colSums(combined_gmt != 0))]
   combined_gmt <- combined_gmt[, !duplicated(colnames(combined_gmt))]
+
   return(combined_gmt)
+
 }
 
 #' Merge two sparse matrices
-#'
 #' @param m1 First sparse matrix (or NULL).
 #' @param m2 Second sparse matrix (or NULL).
 #' @param margin Unused, reserved for future.
 #' @param verbose Verbosity level.
 #' @return Combined sparse matrix.
 #' @keywords internal
-merge_sparse_matrix <- function(m1, m2, margin = NULL, verbose = 1) {
-  if (is.null(m1)) {
-    return(m2)
-  }
-  if (is.null(m2)) {
-    return(m1)
-  }
-  cbind_sparse_matrix(m1 = m1, m2 = m2)
+merge_sparse_matrix <- function(m1,
+                                m2,
+                                margin = NULL,
+                                verbose = 1) {
+
+  if (is.null(m1)) return(m2)
+
+  if (is.null(m2)) return(m1)
+
+  return(cbind_sparse_matrix(m1 = m1, m2 = m2))
+
 }
 
 #' Strip MOFA feature prefix
-#'
 #' @param xx Character vector, matrix, or list.
 #' @return Input with prefixes removed.
 #' @keywords internal
 mofa.strip_prefix <- function(xx) {
+
   if (class(xx) == "character") {
     xx <- sub("[A-Za-z0-9]+:", "", xx)
     return(xx)
   }
+
   if (class(xx) == "matrix") {
     rownames(xx) <- sub("[A-Za-z0-9]+:", "", rownames(xx))
     return(xx)
   }
+
   if (class(xx) %in% c("list", "array") || is.list(xx)) {
     for (i in 1:length(xx)) {
       dt <- paste0("^", names(xx)[i], ":")
@@ -797,16 +814,19 @@ mofa.strip_prefix <- function(xx) {
     }
     return(xx)
   }
-  xx
+
+  return(xx)
+
 }
 
 #' Add MOFA feature prefix
-#'
 #' @param xx Named list of matrices or vectors.
 #' @return Input with layer-name prefixes added.
 #' @keywords internal
 mofa.prefix <- function(xx) {
+
   xx <- mofa.strip_prefix(xx)
+
   for (i in 1:length(xx)) {
     dt <- paste0(names(xx)[i], ":")
     if (is.null(dim(xx[[i]]))) {
@@ -815,43 +835,43 @@ mofa.prefix <- function(xx) {
       rownames(xx[[i]]) <- paste0(dt, rownames(xx[[i]]))
     }
   }
-  xx
+
+  return(xx)
+
 }
 
 #' Merge MOFA data layers by row
-#'
 #' @param xx Named list of data matrices.
 #' @return Combined matrix with prefixed rownames.
 #' @keywords internal
-mofa.merge_data <- function(xx) {
-  do.call(rbind, mofa.prefix(xx))
-}
+mofa.merge_data <- function(xx) { do.call(rbind, mofa.prefix(xx)) }
 
 #' Split MOFA data by prefix
-#'
 #' @param X Matrix with prefixed rownames.
 #' @param keep.prefix Whether to keep prefix in names.
 #' @return Named list of matrices per layer.
 #' @keywords internal
 mofa.split_data <- function(X, keep.prefix = FALSE) {
+
   if (!all(grepl("[:]|SOURCE|SINK", rownames(X)))) {
     rownames(X) <- paste0("x:", rownames(X))
   }
+
   dtype <- sub(":.*", "", rownames(X))
   xx <- tapply(1:nrow(X), dtype, function(i) X[i, , drop = FALSE])
-  if (!keep.prefix) {
-    xx <- mofa.strip_prefix(xx)
-  }
-  xx
+  if (!keep.prefix) xx <- mofa.strip_prefix(xx)
+
+  return(xx)
+
 }
 
 #' Select top SD features per MOFA layer
-#'
 #' @param xdata Matrix or list of matrices.
 #' @param ntop Number of top features to keep.
 #' @return Filtered data with top-variance features.
 #' @keywords internal
 mofa.topSD <- function(xdata, ntop) {
+
   if (is.list(xdata)) {
     res <- lapply(xdata, function(x) {
       sdx <- matrixStats::rowSds(x, na.rm = TRUE)
@@ -873,26 +893,28 @@ mofa.topSD <- function(xdata, ntop) {
     message("[mofa.topSD] WARNING: could not detect type")
     res <- xdata
   }
+
   return(res)
+
 }
 
 #' Compute row means by group
-#'
 #' @param X Numeric matrix (dense or sparse).
 #' @param group Group labels for rows.
 #' @param reorder Whether to preserve group order.
 #' @return Matrix of group-level row means.
 #' @keywords internal
 rowmean <- function(X, group = rownames(X), reorder = TRUE) {
-  if (nrow(X) == 1) {
-    return(X)
-  }
+
+  if (nrow(X) == 1) return(X)
+
   ngroup <- length(unique(group))
   if (ngroup == 1) {
     newX <- matrix(Matrix::colMeans(X, na.rm = TRUE), nrow = 1, ncol = ncol(X))
     dimnames(newX) <- list(group[1], colnames(X))
     return(newX)
   }
+
   if (is.matrix(X) || any(class(X) %in% c("matrix"))) {
     sumX <- base::rowsum(as.matrix(X), group, na.rm = TRUE)
     nX <- base::rowsum(1 * (!is.na(as.matrix(X))), group)
@@ -911,46 +933,55 @@ rowmean <- function(X, group = rownames(X), reorder = TRUE) {
     newX <- (group_mat %*% X0) / nc
     newX <- Matrix::Matrix(newX, sparse = TRUE)
   }
+
   if (reorder) {
     ii <- match(unique(group), rownames(newX))
     newX <- newX[ii, , drop = FALSE]
   }
-  newX
+
+  return(newX)
+
 }
 
 #' Extract MOFA prefix from names
-#'
 #' @param x Character vector, matrix, or data.frame.
 #' @return Character vector of extracted prefixes.
 #' @keywords internal
 mofa.get_prefix <- function(x) {
+
   if (class(x) %in% c("matrix", "data.frame") || !is.null(dim(x))) {
     x <- rownames(x)
   }
+
   ifelse(grepl(":", x), sub(":.*", "", x), "")
+
 }
 
 #' Merge MOFA data with flexible options
-#'
 #' @param xdata Named list of data matrices.
 #' @param merge.rows Row merge strategy: "prefix", "union", or "intersect".
 #' @param merge.cols Column merge strategy: "prefix", "union", or "intersect".
 #' @return Merged numeric matrix.
 #' @keywords internal
 mofa.merge_data2 <- function(xdata, merge.rows="prefix", merge.cols="union") {
+
   n1 <- length(Reduce(intersect,lapply(xdata,rownames)))
   n2 <- length(Reduce(intersect,lapply(xdata,colnames)))  
   rdim <- sapply(xdata,nrow)
   cdim <- sapply(xdata,ncol)
-  if(n1 < min(rdim) && merge.rows!="prefix") {
+
+  if (n1 < min(rdim) && merge.rows!="prefix") {
     message("WARNING: rows do not match")
   }
-  if(n2 < min(cdim) && merge.cols!="prefix") {
+
+  if (n2 < min(cdim) && merge.cols!="prefix") {
     message("WARNING: columns do not match")
   }
+
   prefix.rows <- (merge.rows=="prefix")
   prefix.cols <- (merge.cols=="prefix")
-  if(prefix.cols) {
+
+  if (prefix.cols) {
     ## prefix the column names. i.e. different datasets.
     for(i in 1:length(xdata)) {
       nn <- sub("^[A-Za-z]+:","",colnames(xdata[[i]]))
@@ -958,30 +989,32 @@ mofa.merge_data2 <- function(xdata, merge.rows="prefix", merge.cols="union") {
     }
     merge.cols <- "union"    
   }
+
   if (prefix.rows) {
-    ## if columns overlap (i.e. same samples), prefix the feature
-    ## names.
-    for(i in 1:length(xdata)) {
+    ## if columns overlap (i.e. same samples), prefix feature names.
+    for (i in 1:length(xdata)) {
       nn <- sub("^[A-Za-z]+:","",rownames(xdata[[i]]))
       rownames(xdata[[i]]) <- paste0(names(xdata)[i],":",nn)
     }
     merge.rows <- "union"
   }
-  if(merge.rows == "intersect") {
+
+  if (merge.rows == "intersect") {
     allfeatures <- Reduce(intersect,lapply(xdata,rownames))
   } else {
     allfeatures <- unique(unlist(lapply(xdata, rownames)))
   }
-  if(merge.cols == "intersect") {
+
+  if (merge.cols == "intersect") {
     allsamples  <- Reduce(intersect,lapply(xdata,colnames))
   } else {
     allsamples  <- unique(unlist(lapply(xdata, colnames)))
   }
+
   D  <- matrix(0, length(allfeatures), length(allsamples))
   nn <- matrix(0, length(allfeatures), length(allsamples))
   rownames(D) <- allfeatures
   colnames(D) <- allsamples
-  i <- 1
   for (i in 1:length(xdata)) {
     A <- xdata[[i]]
     ii <- match(rownames(D), rownames(A))
@@ -991,15 +1024,16 @@ mofa.merge_data2 <- function(xdata, merge.rows="prefix", merge.cols="union") {
     A1[is.na(A1)] <- 0
     D <- D + A1
   }
+
   D <- D / nn
   D[which(nn == 0)] <- NA
   rownames(D) <- allfeatures
   colnames(D) <- allsamples
   return(D)
+
 }
 
 #' Convert probe IDs to gene symbols
-#'
 #' @param probes Character vector of probe IDs.
 #' @param annot_table Annotation data.frame with mappings.
 #' @param query Target column name to return.
@@ -1008,25 +1042,34 @@ mofa.merge_data2 <- function(xdata, merge.rows="prefix", merge.cols="union") {
 #' @param add_datatype Prepend data type prefix.
 #' @return Character vector of mapped symbols.
 #' @keywords internal
-probe2symbol <- function(probes, annot_table, query = "symbol",
-                         key = NULL, fill_na = FALSE, add_datatype = FALSE) {
+probe2symbol <- function(probes,
+                         annot_table,
+                         query = "symbol",
+                         key = NULL,
+                         fill_na = FALSE,
+                         add_datatype = FALSE) {
+
   annot_table <- cbind(rownames = rownames(annot_table), annot_table)
   id.cols <- intersect(c("feature", "gene_name", "symbol"), colnames(annot_table))
+
   if (length(id.cols) > 0) {
     stripped_annot <- apply(annot_table[, id.cols, drop = FALSE], 2, function(a) sub("^[A-Za-z]+:", "", a))
     annot_table <- cbind(annot_table, stripped_annot)
   }
 
   probes1 <- setdiff(probes, c(NA, ""))
+
   if (is.null(key) || !key %in% colnames(annot_table)) {
     key <- which.max(apply(annot_table, 2, function(a) sum(probes1 %in% a)))
   }
+
   if (is.null(key)) {
     message("[probe2symbol] FATAL. could not get key column.")
     return(NULL)
   }
 
   query <- head(intersect(query, colnames(annot_table)), 1)
+
   if (length(query) == 0) {
     message("ERROR. no symbol column.")
     return(NULL)
@@ -1042,9 +1085,7 @@ probe2symbol <- function(probes, annot_table, query = "symbol",
 
   if (fill_na) {
     query_col <- ifelse(query_col == "" | is.na(query_col),
-      yes = probes,
-      no = query_col
-    )
+      yes = probes, no = query_col)
   }
 
   if (add_datatype && "data_type" %in% colnames(annot_table)) {
@@ -1056,10 +1097,10 @@ probe2symbol <- function(probes, annot_table, query = "symbol",
   }
 
   return(query_col)
+
 }
 
 #' Rename matrix rows by annotation mapping
-#'
 #' @param counts Matrix, data.frame, or named vector.
 #' @param annot_table Annotation data.frame with mappings.
 #' @param new_id Target identifier column name.
@@ -1068,8 +1109,13 @@ probe2symbol <- function(probes, annot_table, query = "symbol",
 #' @param keep.prefix Preserve MOFA-style prefix.
 #' @return Input with renamed rows.
 #' @keywords internal
-rename_by2 <- function(counts, annot_table, new_id = "symbol",
-                       na.rm = TRUE, unique = TRUE, keep.prefix = FALSE) {
+rename_by2 <- function(counts,
+                       annot_table,
+                       new_id = "symbol",
+                       na.rm = TRUE,
+                       unique = TRUE,
+                       keep.prefix = FALSE) {
+
   annot_table$rownames <- rownames(annot_table)
   annot_table$rownames2 <- sub("^[A-Za-z]+:", "", rownames(annot_table))
 
@@ -1081,14 +1127,12 @@ rename_by2 <- function(counts, annot_table, new_id = "symbol",
     type <- "vector"
     probes <- names(counts)
   }
-  probe_match <- apply(annot_table, 2, function(x) sum(probes %in% x))
-  if (max(probe_match, na.rm = TRUE) == 0) {
-    return(counts)
-  }
 
-  if (type == "vector") {
-    counts <- cbind(counts)
-  }
+  probe_match <- apply(annot_table, 2, function(x) sum(probes %in% x))
+
+  if (max(probe_match, na.rm = TRUE) == 0) return(counts)
+
+  if (type == "vector") counts <- cbind(counts)
 
   from_id <- names(which.max(probe_match))
   if (new_id == "symbol" && !"symbol" %in% colnames(annot_table) &&
@@ -1103,9 +1147,7 @@ rename_by2 <- function(counts, annot_table, new_id = "symbol",
     return(counts)
   }
 
-  if (type == "vector") {
-    counts <- cbind(counts)
-  }
+  if (type == "vector") counts <- cbind(counts)
 
   keep.prefix <- (keep.prefix && all(grepl(":", probes)))
 
@@ -1134,48 +1176,61 @@ rename_by2 <- function(counts, annot_table, new_id = "symbol",
     counts <- counts[rown, , drop = FALSE]
   }
 
-  if (type == "vector") {
-    counts <- counts[, 1]
-  }
+  if (type == "vector") counts <- counts[, 1]
+
   return(counts)
+
 }
 
 #' Tidy a dataframe with type inference
-#'
 #' @param Y Data.frame or matrix to tidy.
 #' @return Data.frame with inferred column types.
 #' @keywords internal
 tidy.dataframe <- function(Y) {
+
   Y <- Y[, which(colMeans(is.na(Y)) < 1), drop = FALSE]
   Y <- apply(Y, 2, function(x) sub("^NA$", NA, x))
   Y <- Y[, which(colMeans(is.na(Y)) < 1), drop = FALSE]
   Y <- apply(Y, 2, function(x) gsub("^[ ]*|[ ]*$", "", x))
+
   suppressWarnings(num.Y <- apply(Y, 2, function(x) as.numeric(as.character(x))))
+
   is.numeric <- (0.8 * colMeans(is.na(num.Y)) <= colMeans(is.na(Y)))
   nlevel <- apply(Y, 2, function(x) length(unique(x)))
+
   is.factor <- (!is.numeric | (is.numeric & nlevel <= 3))
   is.factor <- (is.factor | grepl("batch|replicat|type|clust|group", colnames(Y)))
+
   new.Y <- data.frame(Y, check.names = FALSE)
   new.Y[, which(is.numeric)] <- num.Y[, which(is.numeric), drop = FALSE]
+
   for (i in which(is.numeric)) new.Y[[i]] <- num.Y[, i]
+
   for (i in which(is.factor)) new.Y[[i]] <- factor(as.character(new.Y[, i]))
+
   new.Y <- data.frame(new.Y, check.names = FALSE)
+
   return(new.Y)
+
 }
 
 #' Expand phenotype matrix to binary design
-#'
 #' @param M Phenotype data.frame or matrix.
 #' @param drop.ref Drop reference level columns.
 #' @param keep.numeric Keep numeric columns as-is.
 #' @param check Perform type checking.
 #' @return Expanded binary design matrix.
 #' @keywords internal
-expandPhenoMatrix <- function(M, drop.ref = TRUE, keep.numeric = FALSE, check = TRUE) {
+expandPhenoMatrix <- function(M,
+                              drop.ref = TRUE,
+                              keep.numeric = FALSE,
+                              check = TRUE) {
+
   a1 <- tidy.dataframe(M)
   nlevel <- apply(a1, 2, function(x) length(setdiff(unique(x), NA)))
   nterms <- colSums(!is.na(a1))
   nratio <- nlevel / nterms
+
   if (inherits(a1, "data.frame")) {
     a1.typed <- utils::type.convert(a1, as.is = TRUE)
     y.class <- sapply(a1.typed, function(a) class(a)[1])
@@ -1196,12 +1251,13 @@ expandPhenoMatrix <- function(M, drop.ref = TRUE, keep.numeric = FALSE, check = 
 
   y.isnum <- (y.class %in% c("numeric", "integer"))
   kk <- which(y.isnum | (!y.isnum & nlevel > 1 & nratio < 0.66))
+
   if (length(kk) == 0) {
     kk <- which(y.isnum | (!y.isnum & nlevel > 1))
   }
-  if (length(kk) == 0) {
-    return(NULL)
-  }
+
+  if (length(kk) == 0) return(NULL)
+
   a1 <- a1[, kk, drop = FALSE]
   a1.isnum <- y.isnum[kk]
 
@@ -1241,17 +1297,20 @@ expandPhenoMatrix <- function(M, drop.ref = TRUE, keep.numeric = FALSE, check = 
   }
 
   names(m1) <- colnames(a1)
+
   for (i in 1:length(m1)) {
     colnames(m1[[i]]) <- paste0(names(m1)[i], "=", colnames(m1[[i]]))
   }
+
   m1 <- do.call(cbind, m1)
   colnames(m1) <- sub("=#", "", colnames(m1))
   rownames(m1) <- rownames(M)
+
   return(m1)
+
 }
 
 #' Compute supercells for single-cell data
-#'
 #' @param counts Count matrix (genes x cells).
 #' @param meta Cell metadata data.frame.
 #' @param group Grouping variable name or vector.
@@ -1266,9 +1325,11 @@ pgx.supercell <- function(counts,
                           gamma = 20,
                           nvargenes = 1000,
                           log.transform = TRUE) {
+
   if (!requireNamespace("SuperCell", quietly = TRUE)) {
     stop("Package 'SuperCell' is required for pgx.supercell(). Please install it.")
   }
+
   if (log.transform) {
     X <- logCPM(counts, total = 1e4)
   } else {
@@ -1287,11 +1348,8 @@ pgx.supercell <- function(counts,
     if (NCOL(group) > 1) group <- apply(group, 1, paste, collapse = ".")
   }
 
-  SC <- SuperCell::SCimplify(X,
-    gamma = gamma,
-    n.var.genes = nvargenes,
-    cell.split.condition = group
-  )
+  SC <- SuperCell::SCimplify(X, gamma = gamma,
+    n.var.genes = nvargenes, cell.split.condition = group)
   message("[pgx.supercell] SuperCell::SCimplify completed")
 
   meta <- as.data.frame(meta)
@@ -1310,17 +1368,9 @@ pgx.supercell <- function(counts,
 
   counts <- as.matrix(counts)
   if (log.transform) {
-    sc.counts <- SuperCell::supercell_GE(
-      counts,
-      mode = "sum",
-      groups = SC$membership
-    )
+    sc.counts <- SuperCell::supercell_GE(counts, mode = "sum", groups = SC$membership)
   } else {
-    sc.counts <- SuperCell::supercell_GE(
-      counts,
-      mode = "average",
-      groups = SC$membership
-    )
+    sc.counts <- SuperCell::supercell_GE(counts, mode = "average", groups = SC$membership)
   }
 
   message("[pgx.supercell] SuperCell::supercell_GE completed")
@@ -1328,5 +1378,6 @@ pgx.supercell <- function(counts,
   colnames(sc.counts) <- paste0("mc", 1:ncol(sc.counts))
   rownames(sc.meta) <- colnames(sc.counts)
 
-  list(counts = sc.counts, meta = sc.meta, membership = sc.membership)
+  return(list(counts = sc.counts, meta = sc.meta, membership = sc.membership))
+
 }
