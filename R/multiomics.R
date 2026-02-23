@@ -1,5 +1,4 @@
 #' Run multi-omics WGCNA analysis
-#'
 #' @param dataX Named list of data matrices.
 #' @param samples Sample metadata data frame.
 #' @param contrasts Contrast matrix or NULL.
@@ -60,41 +59,11 @@ computeWGCNA_multiomics <- function(dataX,
                                     progress = NULL
                                     ) {
 
-  if(0) {
-    power=6
-    ngenes = 2000;
-    do.consensus = 1
-    clustMethod = "average"
-    cutMethod = "hybrid"
-    clustMethod = "average";
-    cutMethod = "hybrid";
-    minmodsize = 10;
-    minKME = 0.3;
-    deepsplit = 2;
-    mergeCutHeight = 0.3;
-    compute.enrichment = TRUE;
-    xref = c("gx","px");
-    annot = NULL;
-    GMT = NULL;
-    drop.ref = FALSE;
-    add.pheno = FALSE;
-    add.gsets = FALSE;
-    do.consensus = FALSE;
-    gset.methods = c("fisher","gsetcor","xcor");
-    gset.ntop = 1000;
-    gset.xtop = 100;
-    report = TRUE;
-    ai_model = "";
-    experiment = "";
-    verbose = 1;
-    progress = NULL
-  }
 
-  if(inherits(dataX,"matrix")) {
+  if (inherits(dataX,"matrix")) {
     dataX <- mofa.split_data(dataX, keep.prefix=FALSE)
   }
 
-  ## preprocessing
   if (!is.null(annot)) {
     dataX <- lapply(dataX, function(x) rename_by2(x, annot, "symbol"))
   }
@@ -104,26 +73,16 @@ computeWGCNA_multiomics <- function(dataX,
     GMT <- rename_by2(GMT, annot, "symbol")
   }
 
-  ## if(add.gsets || compute.enrichment ) {
-  ##   ## augment geneset matrix with original GSETxGENE
-  ##   GMT0 <- getPlaydataGMT()
-  ##   if(!is.null(annot)) GMT0 <- rename_by2(GMT0, annot, "symbol")
-  ##   if(!is.null(GMT)) {
-  ##     GMT <-  merge_sparse_matrix(GMT, GMT0)
-  ##   } else {
-  ##     GMT <- GMT0
-  ##   }
-  ## }
 
   ## add pheno matrix??
-  if(add.gsets && !is.null(GMT)) {
+  if (add.gsets && !is.null(GMT)) {
     X <- mofa.merge_data2(dataX, merge.rows="union")
-    if(!is.null(annot)) X <- rename_by2(X, annot, "symbol")
+    if (!is.null(annot)) X <- rename_by2(X, annot, "symbol")
     kk <- intersect(rownames(X), rownames(GMT))
-    if(length(kk) == 0) {
+    if (length(kk) == 0) {
       message("Error: X and GMT do not share features")
     }
-    if(length(kk)) {
+    if (length(kk)) {
       if (!requireNamespace("plaid", quietly = TRUE)) {
         stop("Package 'plaid' is required for gene set integration")
       }
@@ -143,29 +102,25 @@ computeWGCNA_multiomics <- function(dataX,
     dataX[dt.na] <- lapply(dataX[dt.na], imputeMissing, method = "SVD2")
   }
 
-  ## truncate names??
-  #names(dataX) <- substring(names(dataX),1,2) ##???
-
-  if(is.null(power)) power <- NA
+  if (is.null(power)) power <- NA
   nw <- length(dataX)
-  if(length(power)<nw) power <- head(rep(power, nw),nw)
+  if (length(power)<nw) power <- head(rep(power, nw),nw)
   names(power) <- names(dataX)
-  if(any(is.na(power))) power[is.na(power)] <- "sft"
+  if (any(is.na(power))) power[is.na(power)] <- "sft"
 
-  if(length(minKME)<nw) minKME <- head(rep(minKME, nw),nw)
-  if(length(deepsplit)<nw) deepsplit <- head(rep(deepsplit, nw),nw)
+  if (length(minKME)<nw) minKME <- head(rep(minKME, nw),nw)
+  if (length(deepsplit)<nw) deepsplit <- head(rep(deepsplit, nw),nw)
   names(minKME) <- names(dataX)
   names(deepsplit) <- names(dataX)
 
-  if(any(as.character(power) %in% c("sft","iqr"))) {
+  if (any(as.character(power) %in% c("sft","iqr"))) {
     ii <- which(as.character(power) %in% c("sft","iqr"))
     message("[compute_multiomics] estimating power with method = ", power[ii])
-    i=1
-    for(i in ii) {
+    for (i in ii) {
       p <- pickSoftThreshold(
         Matrix::t(dataX[[i]]), sft=NULL, rcut=0.85, powers = NULL,
         method=power[i], nmax=1000, verbose=1)
-      if(length(p)==0 || is.null(p) ) p <- NA
+      if (length(p)==0 || is.null(p) ) p <- NA
       power[i] <- p
     }
     power <- ifelse (is.na(power), 12, power)
@@ -173,7 +128,6 @@ computeWGCNA_multiomics <- function(dataX,
   }
   power <- as.numeric(power)
   names(power) <- names(dataX)
-
 
   if(!is.null(progress)) {
     progress$set(message = paste("computing WGCNA modules..."), value = 0.33)
@@ -206,7 +160,7 @@ computeWGCNA_multiomics <- function(dataX,
   }
 
   dtlist <- setdiff(names(dataX), names(layers))
-  for(dt in dtlist) {
+  for (dt in dtlist) {
     cat("[compute_multiomics] computing WGCNA for", dt, "-------------\n")
     minkme1 <- ifelse(dt=='ph', 0, minKME[dt])
     minmodsize <- ifelse(dt=='ph', 1, minmodsize)
@@ -234,7 +188,6 @@ computeWGCNA_multiomics <- function(dataX,
   }
 
   layers <- layers[names(dataX)]
-  names(layers)
 
   ## get members
   me.genes <- lapply(layers, function(m) m$me.genes)
@@ -252,9 +205,9 @@ computeWGCNA_multiomics <- function(dataX,
   
   ## Compute enrichment
   gsea <- NULL
-  if(compute.enrichment) {
+  if (compute.enrichment) {
     message("[compute_multiomics] computing module enrichment...")
-    if(!is.null(progress)) {
+    if (!is.null(progress)) {
       progress$set(message = paste("computing module enrichment..."), value = 0.66)
     }
 
@@ -272,7 +225,7 @@ computeWGCNA_multiomics <- function(dataX,
     )
 
     ## split up results?? still needed in old formats
-    for(k in names(layers)) {
+    for (k in names(layers)) {
       mm <- names(layers[[k]]$me.genes)
       gg <- gsea[mm]
       names(gg) <- mm
@@ -284,7 +237,7 @@ computeWGCNA_multiomics <- function(dataX,
   lasagna.model <- NULL
   lasagna.graph <- NULL
   do.lasagna = TRUE
-  if(do.lasagna) {
+  if (do.lasagna) {
     dbg("[compute_multiomics] >>> creating lasagna ")
 
     ## Get eigengene matrices, remove grey modules
@@ -293,7 +246,7 @@ computeWGCNA_multiomics <- function(dataX,
     ww <- ww[which(sapply(ww,nrow)>0)]
 
     datTraits <- layers[[1]]$datTraits
-    gdata <- list( X = ww, samples = datTraits )
+    gdata <- list(X = ww, samples = datTraits)
 
     ## Create lasagna model
     lasagna.model <- lasagna.create_model(
@@ -324,7 +277,6 @@ computeWGCNA_multiomics <- function(dataX,
   if(report) {
     dbg("[compute_multiomics] >>> creating report")
     ## Create summaries of each module.
-    ##
     if(!is.null(progress)) progress$set(message = "Creating report...", value=0.8)
     if(!is.null(ai_model)) message("Creating report using ", ai_model)
     if(is.null(ai_model)||ai_model=="") message("Creating dummy report")
@@ -345,8 +297,7 @@ computeWGCNA_multiomics <- function(dataX,
 
   dbg("[compute_multiomics] copying settings...")
 
-  ## IK: new structure. like consensus. put datatype wgcna in
-  ## layers slot.
+  ## Like consensus: put datatype wgcna in layers slot.
   settings <- list(
     minmodsize = minmodsize,
     power = power,
@@ -355,12 +306,7 @@ computeWGCNA_multiomics <- function(dataX,
     minKME = minKME,
     networktype = "signed",
     tomtype = "signed",
-    #ngenes = ngenes,
-    #maxBlockSize = 9999,
     gset.methods = gset.methods,
-    #compute.enrichment = TRUE,
-    #summary = TRUE,
-    #ai_model = ai_model,
     NULL
   )
 
@@ -375,52 +321,55 @@ computeWGCNA_multiomics <- function(dataX,
     datanames = datanames,
     lasagna = lasagna.model,
     graph = lasagna.graph,
-    ## datExpr = datExpr,
-    ## datTraits = datTraits,
-    ## modTraits = modTraits,
     experiment = experiment,
     settings = settings,
     class = "multiomics"
   )
 
   return(out)
+
 }
+
 
 ## ----------------------------------------------------
 ## Perform geneset analysis on modules
 ## ----------------------------------------------------
-
 #' Merge multiple ME matrices into one. Allow different dimensions.
-#'
 #' @param mlist List of ME matrices.
 #' @param me2 Optional second ME matrix.
 #' @param prefix Prefix columns with list names.
 #' @return Merged eigengene matrix.
 #' @keywords internal
-mergeME <- function(mlist, me2=NULL, prefix=FALSE) {
-  if(!is.null(me2) && !inherits(mlist,"list")) {
+mergeME <- function(mlist,
+                    me2 = NULL,
+                    prefix = FALSE) {
+
+  if (!is.null(me2) && !inherits(mlist,"list")) {
     mlist <- list(mlist, me2)
   }
-  all.samples <- sapply(mlist, rownames, simplify=FALSE)
-  all.samples <- unique(unlist(all.samples))
-  if(prefix) {
-    for(i in 1:length(mlist)) {
+
+  all.samples <- unique(unlist(sapply(mlist, rownames, simplify=FALSE)))
+
+  if (prefix) {
+    for (i in 1:length(mlist)) {
       colnames(mlist[[i]]) <- paste0(names(mlist)[i],":",colnames(mlist[[i]]))
     }
   }
+
   is.mat <- all(sapply(mlist, inherits, what="matrix"))
-  all.me <- sapply(mlist, colnames, simplify=FALSE)
-  all.me <- unique(unlist(all.me))
-  M <- matrix(NA, nrow=length(all.samples), ncol=length(all.me))
-  M <- as.data.frame(M)
+  all.me <- unique(unlist(sapply(mlist, colnames, simplify=FALSE)))
+
+  M <- as.data.frame(matrix(NA, nrow=length(all.samples), ncol=length(all.me)))
   rownames(M) <- all.samples
   colnames(M) <- all.me
-  i=1
-  for(i in 1:length(mlist)) {
+
+  for (i in 1:length(mlist)) {
     ii <- match(rownames(mlist[[i]]), rownames(M))
     jj <- match(colnames(mlist[[i]]), colnames(M))
-    M[ii,jj] <- mlist[[i]]
+    M[ii, jj] <- mlist[[i]]
   }
-  if(is.mat) M <- as.matrix(M)
+
+  if (is.mat) M <- as.matrix(M)
   return(M)
+
 }
