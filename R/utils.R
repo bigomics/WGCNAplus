@@ -1381,3 +1381,115 @@ pgx.supercell <- function(counts,
   return(list(counts = sc.counts, meta = sc.meta, membership = sc.membership))
 
 }
+
+
+#' Calculate sparse correlation matrix handling missing values
+#' @param G Sparse matrix containing gene sets
+#' @param mat Matrix of values
+#' @return Correlation matrix between G and mat
+#' @details If mat has no missing values, calculates corr. using corSparse.
+#' Otherwise computes column-wise correlations only using non-missing values.
+#' @export
+cor_sparse_matrix <- function(G, mat) {
+
+  if (sum(is.na(mat)) == 0) {
+    cor_matrix <- qlcMatrix::corSparse(G, mat)
+  } else {
+    message("matrix has missing values: computing column-wise reduced cor")
+    corSparse.vec <- function(X, y) {
+      jj <- which(!is.na(y))
+      qlcMatrix::corSparse(X[jj, , drop = FALSE], cbind(y[jj]))
+    }
+    cor_matrix <- lapply(1:ncol(mat), function(i) corSparse.vec(G, mat[, i]))
+    cor_matrix <- do.call(cbind, cor_matrix)
+  }
+
+  return(cor_matrix)
+
+}
+
+#' Calculate gene set rank correlation
+#' Compute rank correlation between a gene rank vector/matrix and gene sets
+#' @param rnk Numeric vector or matrix of gene ranks, with genes as row names
+#' @param gset Numeric matrix of gene sets, with genes as row/column names
+#' @param compute.p Logical indicating whether to compute p-values
+#' @param use.rank Logical indicating whether to rank transform rnk before correlation
+#' @return Named list with components:
+#' \itemize{
+#'  \item rho - Matrix of correlation coefficients between rnk and gset
+#'  \item p.value - Matrix of p-values for correlation (if compute.p = TRUE)
+#'  \item q.value - Matrix of FDR adjusted p-values (if compute.p = TRUE)
+#' }
+#' @details This function calculates sparse rank correlation between rnk and each
+#' column of gset using \code{qlcMatrix::corSparse()}. It handles missing values in
+#' rnk by computing column-wise correlations.
+#' P-values are computed from statistical distribution
+#' @examples
+#' \dontrun{
+#' librart(playbase)
+#' ranks <- sample(1:10000, 1000, replace = TRUE)
+#' names(ranks) <- replicate(1000, paste(sample(LETTERS, 4, replace = TRUE), collapse = ""))
+#' genesets <- matrix(rnorm(1000 * 20), ncol = 20)
+#' rownames(genesets) <- names(ranks)
+#' gset.rankcor(ranks, genesets, compute.p = TRUE)
+#' }
+#' @export
+gset.rankcor <- function(rnk, gset, compute.p = FALSE, use.rank = TRUE) {
+
+  if (ncol(gset) == 0 || NCOL(rnk) == 0) {
+    if (ncol(gset) == 0) message("ERROR. gset has zero columns")
+    if (NCOL(rnk) == 0) message("ERROR. rnk has zero columns")
+    return(NULL)
+  }
+
+  if (!inherits(gset, "Matrix")) stop("gset must be a matrix")
+
+  is.vec <- (NCOL(rnk) == 1 && !any(class(rnk) %in% c("matrix", "Matrix")))
+
+  if (is.vec && is.null(names(rnk))) stop("rank vector must be named")
+
+  if (!is.vec && is.null(rownames(rnk))) stop("rank matrix must have rownames")
+
+  if (is.vec) rnk <- matrix(rnk, ncol = 1, dimnames = list(names(rnk), "rnk"))
+
+  n1 <- sum(rownames(rnk) %in% colnames(gset), na.rm = TRUE)
+  n2 <- sum(rownames(rnk) %in% rownames(gset), na.rm = TRUE)
+
+  if (n1 > n2) gset <- Matrix::t(gset)
+
+  gg <- intersect(rownames(gset), rownames(rnk))
+  rnk1 <- rnk[gg, , drop = FALSE]
+  gset <- gset[gg, , drop = FALSE]
+
+  if (use.rank) {
+    if (inherits(rnk1, "dgCMatrix")) {
+      rnk1 <- sparseMatrixStats::colRanks(rnk1, na.last = "keep", ties.method = "random", preserveShape = TRUE)
+    } else {
+      rnk1 <- matrixStats::colRanks(rnk1, na.last = "keep", ties.method = "random", preserveShape = TRUE)
+    }
+  }
+
+  ## two cases: (1) in case no missing values, just use corSparse on
+  ## whole matrix. (2) in case the rnk matrix has missing values, we
+  ## must proceed 1-column at time and do reduced corSparse on
+  ## intersection of genes.
+  rho1 <- cor_sparse_matrix(gset, rnk1)
+
+  rownames(rho1) <- colnames(gset)
+  colnames(rho1) <- colnames(rnk1)
+  rho1[is.nan(rho1)] <- NA ## ??
+
+  .cor.pvalue <- function(x, n) 2 * stats::pnorm(-abs(x / ((1 - x**2) / (n - 2))**0.5))
+  if (compute.p) {
+    pv <- apply(rho1, 2, function(x) .cor.pvalue(x, n = nrow(rnk1)))
+    pv[is.nan(pv)] <- NA ## ??
+    qv <- apply(pv, 2, stats::p.adjust, method = "fdr")
+    df <- list(rho = rho1, p.value = pv, q.value = qv)
+  } else {
+    df <- list(rho = rho1, p.value = NA, q.value = NA)
+  }
+
+  return(df)
+
+}
+
