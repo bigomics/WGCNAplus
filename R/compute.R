@@ -1,3 +1,6 @@
+## =========================================================================
+## Main WGCNA computation pipeline
+## =========================================================================
 
 #' Run main WGCNA computation pipeline
 #' @param X Gene expression matrix (genes x samples).
@@ -57,37 +60,11 @@ computeWGCNA <- function(X,
                          is.multiomics = NULL,
                          verbose = 0) {
 
-  if (0) {
-    ngenes <- 2000
-    minmodsize <- 20
-    power <- 12
-    mergeCutHeight <- 0.15
-    deepsplit <- 2
-    minKME <- 0.3
-    treeCut <- 0.99
-    treeCutCeiling <- 1
-    networktype <- "signed"
-    tomtype <- "signed"
-    clustMethod <- "average"
-    cutMethod <- "hybrid"
-    calcMethod <- "fast"
-    lowrank <- 40
-    numericlabels <- FALSE
-    maxBlockSize <- 9999
-    merge.dendro <- TRUE
-    compute.stats <- TRUE
-    prefix <- "ME"
-    sv.tom <- 40
-    drop.ref <- FALSE
-    net <- NULL
-    is.multiomics <- NULL
-    verbose <- 0
-  }
-
   kk <- intersect(colnames(X), rownames(samples))
   X <- as.matrix(X[, kk])
   samples <- as.data.frame(samples, check.names = FALSE)
   samples <- samples[kk, , drop = FALSE]
+
   if (!is.null(contrasts)) {
     contrasts <- contrasts[kk, , drop = FALSE]
   }
@@ -128,7 +105,6 @@ computeWGCNA <- function(X,
   message("[compute] mergeCutHeight = ", mergeCutHeight)
   message("[compute] calcMethod = ", calcMethod)
 
-  ## WGCNA::enableWGCNAThreads()
   if (is.null(net)) {
     message("[compute] computeModules....")
     net <- computeModules(
@@ -183,7 +159,6 @@ computeWGCNA <- function(X,
 
   if (is.null(datTraits)) {
     message("WARNING:: no valid traits. creating random traits.")
-    ## random.trait <- sample(c(0,1), nrow(samples), replace=TRUE)
     random.trait <- head(rep(c(0, 1), nrow(samples)), nrow(samples))
     datTraits <- data.frame(random = random.trait)
     rownames(datTraits) <- rownames(samples)
@@ -219,7 +194,6 @@ computeWGCNA <- function(X,
   ## instead of the huge TOM matrix we save a smaller SVD.
   svTOM <- NULL
   if (sv.tom > 0) {
-    ## sv.tom <- ceiling(min(sv.tom,dim(datExpr)/2))
     message("[compute] reducing TOM. sv.tom = ", sv.tom)
     rownames(TOM) <- colnames(TOM) <- colnames(datExpr)
     sv.tom <- min(sv.tom, ncol(TOM) - 1)
@@ -269,13 +243,13 @@ computeWGCNA <- function(X,
       net$merged_dendro <- NULL
     }
   }
-  remove(TOM) ## big
+
+  remove(TOM)
 
   ## construct results object
   results <- list(
     datExpr = datExpr,
     datTraits = datTraits,
-    ## TOM = TOM,  ## this can be BIG!!! generally no need, just for plotting
     svTOM = svTOM, ## smaller singular vectors
     net = net,
     me.genes = me.genes,
@@ -288,12 +262,12 @@ computeWGCNA <- function(X,
   message("[compute] completed. \n\n")
 
   return(results)
+
 }
 
 #' Reimplementation for WGCNA::blockwiseModules(). This returns exact
 #' same object as WGCNA::blockwiseModules() but is faster and allows
 #' different clustering linkage methods (ward, complete).
-#'
 #' @param datExpr Expression data (samples x genes).
 #' @param power Soft-thresholding power.
 #' @param networkType Network type (signed/unsigned).
@@ -314,33 +288,29 @@ computeWGCNA <- function(X,
 #' @param maxBlockSize Maximum block size for computation.
 #' @param returnTOM Return TOM matrix in output.
 #' @param verbose Verbosity level.
-#'
 #' @return List mimicking blockwiseModules output.
-#'
 #' @keywords internal
-computeModules <- function(
-  datExpr,
-  power = 6,
-  networkType = "signed",
-  TOM = NULL,
-  TOMType = "signed",
-  calcMethod = "fast",
-  lowrank = 20,
-  clustMethod = "average",
-  cutMethod = "hybrid", ## hybrid, tree, static
-  deepSplit = 2,
-  treeCut = 0.99,
-  treeCutCeiling = 1,
-  minModuleSize = 20,
-  minModuleSize2 = minModuleSize,
-  mergeCutHeight = 0.15,
-  minKMEtoStay = 0.3,
-  numericLabels = FALSE, ## numeric or 'color' labels
-  maxBlockSize = 9999,
-  returnTOM = FALSE,
-  verbose = 1
-) {
-  # power=6;networkType=TOMType="signed";minModuleSize=20;mergeCutHeight=0.15;minKMEtoStay=0.3;numericLabels=FALSE;clustMethod="average";deepSplit = 2;treeCut = 0.99;treeCutCeiling = 1;
+computeModules <- function(datExpr,
+                           power = 6,
+                           networkType = "signed",
+                           TOM = NULL,
+                           TOMType = "signed",
+                           calcMethod = "fast",
+                           lowrank = 20,
+                           clustMethod = "average",
+                           cutMethod = "hybrid", ## hybrid, tree, static
+                           deepSplit = 2,
+                           treeCut = 0.99,
+                           treeCutCeiling = 1,
+                           minModuleSize = 20,
+                           minModuleSize2 = minModuleSize,
+                           mergeCutHeight = 0.15,
+                           minKMEtoStay = 0.3,
+                           numericLabels = FALSE, ## numeric or 'color' labels
+                           maxBlockSize = 9999,
+                           returnTOM = FALSE,
+                           verbose = 1
+                           ) {
 
   cor <- WGCNA::cor ## needed...
   deepSplit <- as.integer(deepSplit)
@@ -562,32 +532,34 @@ computeModules <- function(
   net$blocks <- rep(1, ncol(datExpr))
   net$MEsOK <- TRUE
   net$power <- power
+
   if (returnTOM) net$TOM <- TOM
+
   return(net)
+
 }
 
-#' Faster implementation of TOM computation using low-rank SVD
-#' approximation.
-#'
+#' Faster implementation of TOM computation using low-rank SVD approximation.
 #' @param A Adjacency matrix.
 #' @param tomtype TOM type (signed/unsigned).
 #' @param lowrank Low-rank approximation dimension.
-#'
 #' @return TOM similarity matrix.
-#'
 #' @keywords internal
-fastTOMsimilarity <- function(A, tomtype = "signed", lowrank = 20) {
+fastTOMsimilarity <- function(A,
+                              tomtype = "signed",
+                              lowrank = 20) {
+
   # https://stackoverflow.com/questions/56574729
-  #
   # Given square symmetric adjacency matrix A, its possible to
   # calculate the TOM matrix W without the use of for loops, which
   # speeds up the process tremendously
+
   if (!tomtype %in% c("signed", "unsigned")) {
     stop("only works for signed and unsigned tomtype")
   }
 
-  ## Adjacency matrix A can be approximated with SVD. This can make
-  ## TOM calculation much faster.
+  ## Adjacency matrix A can be approximated with SVD.
+  ## This can make TOM calculation much faster.
   diag(A) <- 0
   if (lowrank > (ncol(A) / 2)) lowrank <- -1
   if (lowrank > 0) {
@@ -602,6 +574,7 @@ fastTOMsimilarity <- function(A, tomtype = "signed", lowrank = 20) {
   } else {
     L <- A %*% A
   }
+
   k <- Matrix::colSums(A)
   Kmat <- outer(k, k, FUN = function(x, y) pmin(x, y))
   D <- (Kmat + 1 - A)
@@ -610,30 +583,34 @@ fastTOMsimilarity <- function(A, tomtype = "signed", lowrank = 20) {
   W <- as.matrix(W)
   dimnames(W) <- dimnames(A)
   W <- pmax(W, 0) ## sometimes has negative values...
+
   return(W)
+
 }
 
 
 #' Merge modules with similar eigengenes
-#'
 #' @param datExpr Expression data (samples x genes).
 #' @param colors Module color assignments.
 #' @param cutHeight Cut height for merging.
 #' @param MEs Pre-computed module eigengenes.
-#'
 #' @return List with merged colors and eigengenes.
-#'
 #' @keywords internal
-mergeCloseModules <- function(datExpr, colors, cutHeight, MEs = NULL) {
+mergeCloseModules <- function(datExpr,
+                              colors,
+                              cutHeight,
+                              MEs = NULL) {
+
   if (is.null(MEs)) {
     MEs <- WGCNA::moduleEigengenes(datExpr, colors = colors)$eigengenes
     dim(MEs)
   }
+
   hc <- hclust(as.dist(1 - cor(MEs)), method = "average")
   idx <- cutree(hc, h = cutHeight)
   names(idx) <- sub("^ME", "", names(idx))
-  table(idx)
   new.colors <- colors
+
   m <- 2
   for (m in unique(idx)) {
     cc <- names(which(idx == m))
@@ -641,27 +618,27 @@ mergeCloseModules <- function(datExpr, colors, cutHeight, MEs = NULL) {
     ii <- which(colors %in% cc)
     new.colors[ii] <- cc[1]
   }
+
   new.MEs <- WGCNA::moduleEigengenes(datExpr, colors = new.colors)$eigengenes
-  list(
-    colors = new.colors,
-    MEs = new.MEs
-  )
+
+  return(list(colors = new.colors, MEs = new.MEs))
+
 }
 
 #' Merge block dendrograms into single tree
-#'
 #' @param net Network object with dendrograms.
 #' @param X Data matrix for block means.
 #' @param method Merging method (1 or 2).
-#'
 #' @return Merged hclust dendrogram object.
-#'
 #' @keywords internal
-merge_block_dendrograms <- function(net, X, method = 1) {
+merge_block_dendrograms <- function(net,
+                                    X,
+                                    method = 1) {
+
   ## This function is fragile: it can give a C stack limit error. In
   ## case that happens you can increase the stack limit by running on
   ## the cmd line: >>> ulimit -s unlimited
-  ##
+
   hc <- net$dendrograms
 
   ## merge block dendrogram
@@ -672,9 +649,7 @@ merge_block_dendrograms <- function(net, X, method = 1) {
     hc[[b]]$labels <- rownames(X)[ii]
   }
 
-  if (length(hc) == 1) {
-    return(hc[[1]])
-  }
+  if (length(hc) == 1) return(hc[[1]])
 
   ## compute parent dendrogram
   M <- do.call(rbind, mx)
@@ -687,7 +662,6 @@ merge_block_dendrograms <- function(net, X, method = 1) {
   } else {
     mrg <- hclust_p$merge
     merged_branch <- list()
-    k <- 1
     for (k in 1:nrow(mrg)) {
       i <- mrg[k, 1]
       j <- mrg[k, 2]
@@ -701,5 +675,7 @@ merge_block_dendrograms <- function(net, X, method = 1) {
   }
 
   merged_hclust <- as.hclust(merged)
-  merged_hclust
+
+  return(merged_hclust)
+  
 }
