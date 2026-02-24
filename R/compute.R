@@ -62,16 +62,14 @@ computeWGCNA <- function(X,
 
   kk <- intersect(colnames(X), rownames(samples))
   X <- as.matrix(X[, kk])
-  samples <- as.data.frame(samples, check.names = FALSE)
-  samples <- samples[kk, , drop = FALSE]
+  samples <- as.data.frame(samples[kk, , drop = FALSE], check.names = FALSE)
 
   if (!is.null(contrasts)) {
     contrasts <- contrasts[kk, , drop = FALSE]
   }
 
-  nmissing <- sum(is.na(X))
-  if (nmissing > 0) {
-    message("Found ", nmissing, " missing values in X. Imputing prior to WGCNA.")
+  if (sum(is.na(X)) > 0) {
+    message("Found ", sum(is.na(X)), " missing values in X. Imputing prior to WGCNA.")
     X <- svdImpute2(X)
   }
 
@@ -309,8 +307,7 @@ computeModules <- function(datExpr,
                            numericLabels = FALSE, ## numeric or 'color' labels
                            maxBlockSize = 9999,
                            returnTOM = FALSE,
-                           verbose = 1
-                           ) {
+                           verbose = 1) {
 
   cor <- WGCNA::cor ## needed...
   deepSplit <- as.integer(deepSplit)
@@ -322,10 +319,8 @@ computeModules <- function(datExpr,
     message("[computeModules] estimating power with method = ", power[1])
     powers <- c(c(1:10), seq(from = 12, to = 20, by = 2))
     powers <- c(powers, seq(from = 25, to = 50, by = 5))
-    power <- pickSoftThreshold(datExpr,
-      sft = NULL, rcut = 0.85,
-      method = power[1], nmax = 2000, verbose = 0
-    )
+    power <- pickSoftThreshold(datExpr, sft = NULL, rcut = 0.85,
+      method = power[1], nmax = 2000, verbose = 0)
     if (is.na(power)) power <- 6
     message("[compute_multiomics] estimated power = ", power)
   }
@@ -354,18 +349,13 @@ computeModules <- function(datExpr,
     adjacency <- WGCNA::adjacency(datExpr, power = power, type = networkType)
     adjacency[is.na(adjacency)] <- 0
     if (calcMethod == "fast") {
-      if (verbose > 0) {
-        message("[computeModules] Computing TOM matrix using fast method...")
-      }
+      if (verbose > 0) message("[computeModules] Computing TOM matrix using fast method...")
       TOM <- fastTOMsimilarity(adjacency, tomtype = TOMType, lowrank = lowrank)
     } else if (calcMethod == "adjacency") {
-      if (verbose > 0) {
-        message("[computeModules] Computing using adjacency as TOM matrix...")
-      }
+      if (verbose > 0) message("[computeModules] Computing using adjacency as TOM matrix...")
       TOM <- adjacency
     } else if (calcMethod == "full") {
-      if (verbose > 0) message("[computeModules] Computing full TOM matrix...")
-      ## SLOW!!!
+      if (verbose > 0) message("[computeModules] Computing full TOM matrix...") ## SLOW!!!
       TOM <- WGCNA::TOMsimilarity(adjacency, TOMType = TOMType, verbose = verbose)
     } else {
       stop("[computeModules] ERROR: invalid calcMethod parameter:", calcMethod)
@@ -378,7 +368,6 @@ computeModules <- function(datExpr,
 
   ## clustering
   if (verbose > 0) message("Clustering features using ", clustMethod, " linkage")
-  ## geneTree <- flashClust::flashClust(as.dist(dissTOM), method=clustMethod)
   geneTree <- stats::hclust(as.dist(dissTOM), method = clustMethod)
 
   ## sometimes there is a height error. following is a fix.
@@ -433,7 +422,7 @@ computeModules <- function(datExpr,
   colors <- WGCNA::labels2colors(label)
   MEs <- WGCNA::moduleEigengenes(datExpr, colors = colors)$eigengenes
 
-  # Control MEgrey, if less than 200 features on data, remove it. Also, check that its not full of NaNs
+  # Control MEgrey, if <= 200 features on data, remove it. Also, check that its not full of NaNs
   if (ncol(datExpr) < 200 && "MEgrey" %in% colnames(MEs)) {
     MEs$MEgrey <- NULL
   }
