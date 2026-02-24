@@ -441,13 +441,13 @@ getModuleCrossGenes <-  function(wgcna,
                                  modules = NULL) {
 
 
-  if(!multi) {
+  if (!multi) {
     wgcna <- list(gx = wgcna)
     ref <- 'gx'
   }
 
-  if(is.null(ref)) ref <- head(intersect(names(wgcna),c("gx","px")),1)
-  if(is.null(ref) || !ref %in% names(wgcna)) ref <- names(wgcna)[1]
+  if (is.null(ref)) ref <- head(intersect(names(wgcna),c("gx","px")),1)
+  if (is.null(ref) || !ref %in% names(wgcna)) ref <- names(wgcna)[1]
 
   W <- wgcna[[ref]]
   geneX <- W$datExpr
@@ -463,7 +463,8 @@ getModuleCrossGenes <-  function(wgcna,
   nbx.cor <- cor(geneX, MEx)
 
   nbx.list <- list()
-  for(k in colnames(nbx.cor)) {
+
+  for (k in colnames(nbx.cor)) {
     ii <- head(order(-nbx.cor[,k]), ngenes)
     rho <- nbx.cor[ii,k]
     gene <- rownames(nbx.cor)[ii]
@@ -556,7 +557,7 @@ computeDistinctMatrix <- function(matlist,
 
   Q <- matlist
   for (i in 1:length(matlist)) {
-    ## Any entry not significant is anyway invalid
+
     notsig <- (pv[[i]] > psig)
     Q[[i]][notsig] <- NA
 
@@ -568,10 +569,8 @@ computeDistinctMatrix <- function(matlist,
 
     ## any entry that has consensus is invalid
     cons <- mapply(function(P, S) (P < 0.05) * (S == matsign[[i]]),
-      pv[-i], matsign[-i],
-      SIMPLIFY = FALSE
-    )
-    cons <- (Reduce("+", cons) > consmax) ## or function
+      pv[-i], matsign[-i], SIMPLIFY = FALSE)
+    cons <- (Reduce("+", cons) > consmax)
     Q[[i]][cons] <- NA
   }
 
@@ -587,24 +586,23 @@ computeConsensusModuleEnrichment <- function(cons,
                                              min.genes = 3,
                                              ntop = 400) {
 
-  if(is.null(GMT)) {
+  if (is.null(GMT)) {
     message("ERROR: must provide GMT")
     return(NULL)
   }
 
   gseaX <- list()
-  for(i in 1:length(cons$datExpr)) {
+  for (i in 1:length(cons$datExpr)) {
 
     geneX <- t(cons$datExpr[[i]])
 
-    ## Rename everything to symbols
-    if(!is.null(annot)) {
+    if (!is.null(annot)) {
       geneX <- rename_by2(geneX, annot, "symbol")
       GMT   <- rename_by2(GMT, annot, "symbol")
     }
 
     ng <- length(intersect(rownames(geneX), rownames(GMT)))
-    if(ng == 0) {
+    if (ng == 0) {
       message("[computeConsensusModuleEnrichment] ERROR. No symbol overlap.")
       return(NULL)
     }
@@ -638,11 +636,11 @@ computeConsensusModuleEnrichment <- function(cons,
   }
 
   cons.gsea <- list()
-  for(m in names(gseaX[[1]])) {
+  for (m in names(gseaX[[1]])) {
     xx <- lapply( gseaX, function(g) g[[m]] )
     sel <- Reduce(intersect, lapply(xx, rownames))
-    if(length(sel) > 0) {
-      if(length(sel)==1) sel <- c(sel,sel) ## length==1 crashes...
+    if (length(sel) > 0) {
+      if (length(sel)==1) sel <- c(sel,sel) ## length==1 crashes...
       xx <- lapply(xx, function(x) x[sel,,drop=FALSE] )
       xx.score <- sapply(xx, function(x) x[,"score"])
       colnames(xx.score) <- paste0("score.",colnames(xx.score))
