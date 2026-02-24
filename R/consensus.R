@@ -89,10 +89,9 @@ runConsensusWGCNA <- function(exprList,
   layers <- list()
   if (!is.null(progress)) progress$inc(0.1, "Computing layers...")
   for (i in 1:length(multiExpr)) {
-    k <- names(multiExpr)[i]
-    message("[runConsensusWGCNA] >>> computing WGCNA for ", k)
     X <- Matrix::t(multiExpr[[i]]$data)
-    layers[[k]] <- computeWGCNA(
+    message("[runConsensusWGCNA] Computing WGCNA for ", names(multiExpr)[i])
+    layers[[names(multiExpr)[i]]] <- computeWGCNA(
       X = X,
       samples = phenoData,
       contrasts = contrasts,
