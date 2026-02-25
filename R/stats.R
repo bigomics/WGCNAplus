@@ -141,15 +141,12 @@ computeGeneStats <- function(net,
   ## force align. Sometime they are shorter for some reason...
   gg <- rownames(moduleMembership)
   matMatch <- function(m, gg) {
-    if (is.null(m)) {
-      return(NULL)
-    }
+    if (is.null(m)) return(NULL)
     m <- m[match(gg, rownames(m)), , drop = FALSE]
     rownames(m) <- gg
     return(m)
   }
 
-  ## moduleMembership <- matMatch(moduleMembership)
   MMPvalue <- matMatch(MMPvalue, gg)
   traitSignificance <- matMatch(traitSignificance, gg)
   TSPvalue <- matMatch(TSPvalue, gg)
