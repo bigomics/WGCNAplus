@@ -87,7 +87,6 @@ runConsensusWGCNA <- function(exprList,
 
   # module detection procedure
   layers <- list()
-  if (!is.null(progress)) progress$inc(0.1, "Computing layers...")
   for (i in 1:length(multiExpr)) {
     X <- Matrix::t(multiExpr[[i]]$data)
     message("[runConsensusWGCNA] Computing WGCNA for ", names(multiExpr)[i])
