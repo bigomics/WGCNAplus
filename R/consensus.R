@@ -110,21 +110,17 @@ runConsensusWGCNA <- function(exprList,
     )
   }
 
-  # Run automatic consensus module detection
+  # Consensus module detection
   message("[runConsensusWGCNA] >>> computing CONSENSUS modules...")
-  if (!is.null(progress)) progress$inc(0.1, "Computing consensus...")
-  consensusPower <- unlist(sapply(layers, function(w) w$net$power))
-  if (is.null(consensusPower) && !is.null(power)) {
-    consensusPower <- power
-  }
-  if (is.null(consensusPower)) {
-    consensusPower <- rep(12, length(layers))
-  }
+  consPower <- unlist(sapply(layers, function(w) w$net$power))
+  if (is.null(consPower) && !is.null(power)) consPower <- power
+  if (is.null(consPower)) consPower <- rep(12, length(layers))
 
   sel <- setdiff(names(multiExpr), c("Combined"))
+
   cons <- WGCNA::blockwiseConsensusModules(
     multiExpr[sel],
-    power = as.numeric(consensusPower),
+    power = as.numeric(consPower),
     networkType = "signed",
     TOMType = "signed",
     minModuleSize = as.integer(minModuleSize),
@@ -137,13 +133,13 @@ runConsensusWGCNA <- function(exprList,
     useDiskCache = FALSE,
     verbose = verbose
   )
-  cons$power <- consensusPower
+
+  cons$power <- consPower
 
   ## create and match colors
   for (i in 1:length(layers)) {
     layers[[i]] <- matchColors(layers[[i]], cons$colors)
   }
-
   layers.colors <- sapply(layers, function(r) r$net$colors)
   colors <- cbind(Consensus = cons$colors, layers.colors)
 
@@ -166,18 +162,16 @@ runConsensusWGCNA <- function(exprList,
 
   ## create module-trait matrices for each set
   message("[runConsensusWGCNA] >>> computing module-traits matrices...")
-  datTraits <- 1 * expandPhenoMatrix(
-    phenoData,
-    drop.ref = drop.ref,
-    keep.numeric = TRUE
-  )
+  epm <- expandPhenoMatrix(phenoData, drop.ref = drop.ref, keep.numeric = TRUE)
+  datTraits <- 1 * epm  
+
   if (!is.null(contrasts)) {
     message("[runConsensusWGCNA] adding contrasts to datTraits")
     ctx <- makeContrastsFromLabelMatrix(contrasts)
     ctx <- sign(ctx)
-    ctx[ctx==0] <- NA
-    ctx[ctx==-1] <- 0
-    datTraits <- cbind( datTraits, ctx)
+    ctx[ctx == 0] <- NA
+    ctx[ctx == -1] <- 0
+    datTraits <- cbind(datTraits, ctx)
   }
 
   zlist <- list()
@@ -186,7 +180,7 @@ runConsensusWGCNA <- function(exprList,
     Z <- datTraits
     kk <- intersect(rownames(M), rownames(Z))
     zrho <- cor(M[kk, ], Z[kk, ], use = "pairwise")
-    zrho[is.na(zrho)] <- 0 ## NEED RETHINK!!
+    zrho[is.na(zrho)] <- 0
     zlist[[k]] <- zrho
   }
 
@@ -234,7 +228,6 @@ runConsensusWGCNA <- function(exprList,
   }
 
   if(summary) {
-    if(!is.null(progress)) progress$set(message = "Annotating modules...", value=0.6)
     message("Annotating modules using ", ai_model)
     ai <- describeModules(
       res,
