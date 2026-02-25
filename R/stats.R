@@ -3,19 +3,20 @@
 ## ---------------------------------------------------------------------
 
 #' Pairwise correlation test with p-values
-#'
 #' @param X Numeric matrix of variables.
 #' @param Y Numeric matrix of variables.
 #' @return List with rho, pvalue, and n.
 #' @keywords internal
 cortest <- function(X, Y) {
+
   rho <- cor(X, Y, use = "pairwise.complete")
   nSamples <- t(!is.na(X)) %*% (!is.na(Y))
   ii <- which(nSamples < 3)
   nSamples0 <- pmax(nSamples, 3)
   Pvalue <- WGCNA::corPvalueStudent(rho, nSamples0)
-  if(length(ii)) Pvalue[ii] <- NA
-  list(rho = rho, pvalue = Pvalue, n = nSamples)
+  if (length(ii)) Pvalue[ii] <- NA
+  return(list(rho = rho, pvalue = Pvalue, n = nSamples))
+
 }
 
 #' Compute general feature statistics after WGCNA results.
@@ -24,7 +25,10 @@ cortest <- function(X, Y) {
 #' @param datTraits Trait data matrix.
 #' @param TOM Topological overlap matrix or NULL.
 #' @return List of gene statistic matrices.
-computeGeneStats <- function(net, datExpr, datTraits, TOM) {
+computeGeneStats <- function(net,
+                             datExpr,
+                             datTraits,
+                             TOM) {
 
   kk <- intersect(rownames(datExpr), rownames(datTraits))
   datExpr <- datExpr[kk, , drop = FALSE]
