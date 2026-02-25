@@ -4,7 +4,6 @@
 ## ======================================================================
 
 #' Create report
-#'
 #' @param wgcna A WGCNA result object.
 #' @param ai_model LLM model name string.
 #' @param graph Optional graph object.
@@ -18,46 +17,42 @@
 #' @param progress Optional Shiny progress object.
 #' @return List with report, diagram, and descriptions.
 #' @export
-create_report <- function(wgcna, ai_model,
-                          graph = NULL, annot=NULL, multi=FALSE,
-                          ntop=100, topratio=0.85, psig=0.05,
-                          format="markdown", verbose=1,
-                          progress=NULL) {
-  if(0) {
-    graph = NULL; annot=NULL; multi=FALSE;
-    ntop=100; topratio=0.85; psig=0.05;
-    format="markdown"; verbose=1;
-    progress=NULL
-  }
+create_report <- function(wgcna,
+                          ai_model,
+                          graph = NULL,
+                          annot = NULL,
+                          multi = FALSE,
+                          ntop = 100,
+                          topratio = 0.85,
+                          psig = 0.05,
+                          format = "markdown",
+                          verbose = 1,
+                          progress = NULL) {
 
-  if(is.null(ai_model)) ai_model <- ""
-  if(is.null(graph) && !is.null(wgcna$graph)) graph <- wgcna$graph
+  if (is.null(ai_model)) ai_model <- ""
+  if (is.null(graph) && !is.null(wgcna$graph)) graph <- wgcna$graph
   
-  if(!multi) {
+  if (!multi) {
     layers <- list(gx = wgcna)
-  } else if(!is.null(wgcna$layers)) {
+  } else if (!is.null(wgcna$layers)) {
     layers <- wgcna$layers
   } else {
     layers <- wgcna
   }
 
   ## get top modules (most correlated with some phenotype)
-  top.modules <- getTopModules(layers, topratio=topratio, kx=4,
-    multi=TRUE) ## always multi format
-  top.modules
+  top.modules <- getTopModules(layers, topratio = topratio, kx = 4, multi = TRUE)
 
-  if(is.null(annot) && !is.null(layers[[1]]$annot)) {
+  if (is.null(annot) && !is.null(layers[[1]]$annot)) {
     annot <- layers[[1]]$annot
   }
-  if(is.null(annot)) {
+
+  if (is.null(annot)) {
     message("[create_report] WARNING. providing user annot table is recommended.")
   }
 
-  ##--------------------------------------------------------------------
   ## Step 1. Describe modules with LLM. We can use one LLM model or more.
-  ##--------------------------------------------------------------------
-  if(!is.null(progress)) progress$set(message = "Extracting top modules...", value=0.2)
-  if(verbose) message("Extracting top modules...")
+  if (verbose) message("Extracting top modules...")
   out <- describeModules(
     layers,
     modules = top.modules,
@@ -69,21 +64,17 @@ create_report <- function(wgcna, ai_model,
     verbose = verbose,
     model = ""
   )
-  names(out)
   descriptions_prompts <- out$questions
   descriptions <- out$answers
 
-  ##--------------------------------------------------------------------
   ## Step 2: Make consensus summary from the descriptions.
-  ##--------------------------------------------------------------------
   summaries <- list()
   summaries_prompts <- list()
   results <- NULL
-  if(ai_model != "") {
-    if(!is.null(progress)) progress$set(message = "Simmering modules...", value=0.3)
-    if(verbose) message("Simmering modules...")
+  if (ai_model != "") {
+    if (verbose) message("Simmering modules...")
     k=1
-    for(k in names(descriptions)) {
+    for (k in names(descriptions)) {
       ss <- descriptions[[k]]
       q2 <-  paste("Following are descriptions of a certain WGCNA module by one or more LLMs. Create a consensus conclusion out of the independent descriptions. Describe the underlying biology, relate correlated phenotypes and mention key genes, proteins or metabolites. Just answer, no confirmation, use 1-2 paragraphs. Use prose as much as possible, do not use tables or bullet points.\n\n", ss)
       cc <- ai.ask(q2, model=ai_model)
@@ -92,12 +83,12 @@ create_report <- function(wgcna, ai_model,
     }
     results <- summaries
   } else {
-    if(verbose) message("Skipping module summaries...")
+    if (verbose) message("Skipping module summaries...")
     results <- descriptions
   }
 
   ## addd compute setttings
-  if(!is.null(wgcna$settings)) {
+  if (!is.null(wgcna$settings)) {
     settings <- paste0(names(wgcna$settings),'=',wgcna$settings,collapse='; ')
     results[['compute_settings']] <- settings
   }
@@ -107,51 +98,41 @@ create_report <- function(wgcna, ai_model,
     paste0("================= ",me," =================\n\n", results[[me]],"\n"))
   all.results <- paste(all.results, collapse="\n")
 
-  ##--------------------------------------------------------------------
   ## Step 3: Make detailed report. We concatenate all summaries and
   ## ask a (better) LLM model to create a report.
-  ## --------------------------------------------------------------------
-  if(!is.null(progress)) progress$set(message = "Baking full report...", value=0.6)
-  if(verbose) message("Baking full report...")
-
-  qq=diagram=report=NULL
-  if(ai_model == "") {
+  if (verbose) message("Baking full report...")
+  qq = diagram = report = NULL
+  if (ai_model == "") {
     report <- all.results
   } else {
-
     qq <- "These are the results of a WGCNA analysis. There are descriptions of the most relevant modules. Create a detailed report for this experiment. Give a detailed interpretation of the underlying biology by connecting WGCNA modules into biological functional programs, referring to key genes, proteins or metabolites. Build an cross-module integrative biological narrative. Suggest similarity to known diseases and possible therapies. Add a discussion and conclusion. Omit abstract, future directions, limitations, or references. Add a short paragraph describing methods and compute settings at the end.
 
 Format like a scientific article, use prose as much as possible, minimize the use of tables and bullet points. For long tables show at least the top 5, and at most top 10, up and down entries. Do not inject any inline code. Only write if there was evidence in the source text."
 
-    if(multi) {
-      qq <- gsub("WGCNA","multiomics WGCNA",qq)
-    }
+    if (multi) qq <- gsub("WGCNA","multiomics WGCNA",qq)
 
     xx <- wgcna$experiment
     pp <- paste("You are a biologist interpreting results from a WGCNA analysis for this experiment:",  xx, ".\n\n")
     qq <- paste(pp, qq)
 
-    if(format=="markdown") {
+    if (format == "markdown") {
       qq <- paste(qq, "Format text and sections as markdown.")
     }
-    if(tolower(format)=="html") {
+
+    if (tolower(format) == "html") {
       qq <- paste(qq, "Format text and sections as HTML.")
     }
+
     qq <- paste(qq, "\n\nnHere are the results: <results>",all.results,"\n</results>")
-    ## Finally ask LLM
+
+    ## Ask LLM
     report <- ai.ask(qq, model = ai_model)
     report <- gsub("^```html|```$","",report)
 
-    ##--------------------------------------------------------------------
     ## Step 4: Create diagram from report
-    ##-------------------------------------------------------------------
-    if(!is.null(progress)) progress$set(message = "Mashing up diagram...", value=0.8)
-    if(verbose) message("Mashing up diagram...")
-    diagram <- create_diagram(
-      report,
-      graph = graph,
-      ai_model = ai_model
-    )
+    if (verbose) message("Mashing up diagram...")
+    diagram <- create_diagram(report, graph = graph, ai_model = ai_model)
+
   }
 
   list(
@@ -166,7 +147,6 @@ Format like a scientific article, use prose as much as possible, minimize the us
 }
 
 #' Get multi-dataset top genes and sets tables
-#'
 #' @param multi_wgcna Multi-omics WGCNA object.
 #' @param annot Annotation table or NULL.
 #' @param module Module names to select.
@@ -177,29 +157,25 @@ Format like a scientific article, use prose as much as possible, minimize the us
 #' @return List with top sets, genes, and pheno.
 #' @keywords internal
 #' @export
-getTopTables <- function(wgcna, annot=NULL, module=NULL,
-                         psig=0.05, ntop=40, level=NULL,
-                         rename="symbol") {
-
-  if(0) {
-    ntop=50; psig = 0.05; annot=NULL; multi=FALSE; modules=NULL;
-    experiment=""; verbose=1; model=getOption("WGCNAplus.default_llm");
-    docstyle = "detailed summary"; numpar = 2; level="gene"
-  }
+getTopTables <- function(wgcna,
+                         annot = NULL,
+                         module = NULL,
+                         psig = 0.05,
+                         ntop = 40,
+                         level = NULL,
+                         rename = "symbol") {
   
-  if("layers" %in% names(wgcna)) {
+  if ("layers" %in% names(wgcna)) {
     layers <- wgcna$layers
-  } else if(all(c("datExpr","datTraits") %in% names(wgcna))) {
-    ## single omics object
+  } else if (all(c("datExpr","datTraits") %in% names(wgcna))) {
     layers <- list(gx = wgcna)
   } else {
-    ## old multi-omics object
     layers <- wgcna
   }
 
   ## set level
   nw <- length(layers)
-  if(!is.null(level)) {
+  if (!is.null(level)) {
     level <- head(rep(level, nw),nw)
   } else {
     level <- c("gene","geneset")[1 + 1*grepl("^gs|^gset|geneset",names(layers))]
@@ -209,10 +185,9 @@ getTopTables <- function(wgcna, annot=NULL, module=NULL,
   toplist <- list()
   k <- names(layers)[1]
   for (k in names(layers)) {
-    topk <- getTopGenesAndSets(
-      layers[[k]],  module=module,  annot=annot,
-      ntop=ntop, psig=psig, level=level[[k]], rename=rename)
-    if(!is.null(module)) {
+    topk <- getTopGenesAndSets(layers[[k]], module = module,  annot = annot,
+      ntop = ntop, psig = psig, level = level[[k]], rename = rename)
+    if (!is.null(module)) {
       topk <- lapply( topk, function(s) s[which(names(s) %in% module)] )
     }
     toplist[[k]] <- topk
@@ -222,24 +197,21 @@ getTopTables <- function(wgcna, annot=NULL, module=NULL,
   top$genes <- lapply(toplist, function(t) t[['genes']])
   names(top$genes) <- NULL
   top$genes <- unlist(top$genes, recursive = FALSE)
-  names(top$genes)
 
   top$sets <- lapply(toplist, function(t) t[["sets"]])
   names(top$sets) <- NULL
   top$sets <- unlist(top$sets, recursive = FALSE)
-  names(top$sets)
 
   top$pheno <- lapply(toplist, function(t) t[["pheno"]])
   names(top$pheno) <- NULL
   top$pheno <- unlist(top$pheno, recursive = FALSE)
-  names(top$pheno)
 
   return(top)
+
 }
 
 
 #' Get top genes and gene sets per module
-#'
 #' @param wgcna A WGCNA result object.
 #' @param annot Annotation table or NULL.
 #' @param module Module names to select.
@@ -249,30 +221,29 @@ getTopTables <- function(wgcna, annot=NULL, module=NULL,
 #' @param rename Column name for renaming.
 #' @return List with top sets, genes, and pheno.
 #' @keywords internal
-getTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, ntop=40,
-                               psig = 0.05, level="gene", rename="symbol") {
+getTopGenesAndSets <- function(wgcna,
+                               annot = NULL,
+                               module = NULL,
+                               ntop = 40,
+                               psig = 0.05,
+                               level = "gene",
+                               rename = "symbol") {
 
-  if(0) {
-    k=1
-    wgcna=layers[[k]];  module=NULL;  annot=pgx$genes;
-    ntop=ntop; psig=0.05; level=level[[k]]; rename="symbol"
-  }
   
-  if("layers" %in% names(wgcna) && class(wgcna$datExpr) == "list") {
+  if ("layers" %in% names(wgcna) && class(wgcna$datExpr) == "list") {
     message("[getTopGenesAndSets] multilayer object...")
-    cons <- .getConsensusTopGenesAndSets(wgcna, annot=annot,
-      module=module,  ntop=ntop, rename=rename)
+    cons <- .getConsensusTopGenesAndSets(wgcna, annot=annot, module=module,  ntop=ntop, rename=rename)
     return(cons)
   }
 
   stats <- NULL
-  if(!"stats" %in% names(wgcna) || is.null(wgcna$stats) ) {
-    stats <- computeGeneStats(wgcna$net, wgcna$datExpr, wgcna$datTraits,
-      wgcna$svTOM)
+  if (!"stats" %in% names(wgcna) || is.null(wgcna$stats) ) {
+    stats <- computeGeneStats(wgcna$net, wgcna$datExpr, wgcna$datTraits, wgcna$svTOM)
   } else {
     stats <- wgcna$stats
   }
-  if(!any(c("gse","gsea") %in% names(wgcna))) {
+
+  if (!any(c("gse","gsea") %in% names(wgcna))) {
     warning("object has no enrichment results (gsea)")
   }
 
@@ -281,23 +252,23 @@ getTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, ntop=40,
   mm.sig <- 1*(stats$MMPvalue <= psig)
   ff <- sqrt(rowMeans(stats$foldChange**2, na.rm=TRUE))
   mm <- mm * mm.sig * ff
-  if(!is.null(annot)) {
+  if (!is.null(annot)) {
     annot$gene_title <- paste0(annot$gene_title," (",annot$symbol,")")
     mm <- rename_by2(mm, annot, new_id=rename)
   }
   gg <- rownames(mm)
   mm <- as.list(data.frame(mm))
-  if(!is.null(module)) mm <- mm[which(names(mm) %in% module)]
-  for(i in 1:length(mm)) names(mm[[i]]) <- gg
+  if (!is.null(module)) mm <- mm[which(names(mm) %in% module)]
+  for (i in 1:length(mm)) names(mm[[i]]) <- gg
   mm <- lapply(mm, function(x) x[x!=0])
   topgenes <- lapply(mm, function(x) names(head(sort(-x),ntop)))
 
   ## top genesets
   topsets <- NULL
-  if(any(c("gse","gsea") %in% names(wgcna))) {
-    if(!is.null(wgcna$gsea)) ee <- wgcna$gsea
-    if(!is.null(wgcna$gse)) ee <- wgcna$gse
-    if(!is.null(module)) ee <- ee[which(names(ee) %in% module)]
+  if (any(c("gse","gsea") %in% names(wgcna))) {
+    if (!is.null(wgcna$gsea)) ee <- wgcna$gsea
+    if (!is.null(wgcna$gse)) ee <- wgcna$gse
+    if (!is.null(module)) ee <- ee[which(names(ee) %in% module)]
     topsets <- lapply(ee,function(x) head(rownames(x),ntop))
   }
 
@@ -305,7 +276,7 @@ getTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, ntop=40,
   M <- get_modTraits(wgcna)
   toppheno <- apply(M, 1, function(x) names(which(x > 0.8*max(x, na.rm=TRUE))))
 
-  if(level=="geneset") {
+  if (level == "geneset") {
     topsets <- topgenes
     topgenes <- NULL
   }
@@ -315,7 +286,6 @@ getTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, ntop=40,
 
 
 #' Get consensus top genes and sets
-#'
 #' @param cons Consensus WGCNA object.
 #' @param annot Annotation table or NULL.
 #' @param module Module names to select.
@@ -324,25 +294,27 @@ getTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, ntop=40,
 #' @param rename Column name for renaming.
 #' @return List with top sets, genes, and pheno.
 #' @keywords internal
-.getConsensusTopGenesAndSets <- function(cons, annot=NULL, module=NULL, ntop=40,
-                                         level=c("gene","geneset")[1],
-                                         rename="symbol" ) {
-  if(!"stats" %in% names(cons)) stop("object has no stats")
-  if(!any(c("gse","gsea") %in% names(cons))) {
+.getConsensusTopGenesAndSets <- function(cons,
+                                         annot = NULL,
+                                         module = NULL,
+                                         ntop = 40,
+                                         level = c("gene","geneset")[1],
+                                         rename = "symbol" ) {
+
+  if (!"stats" %in% names(cons)) stop("object has no stats")
+  if (!any(c("gse","gsea") %in% names(cons))) {
     warning("object has no enrichment results (gsea)")
   }
 
-  if(!is.null(annot)) {
+  if (!is.null(annot)) {
     annot$gene_title <- paste0(annot$gene_title," (",annot$symbol,")")
   }
 
   ## get top genes (highest kME)
   topgenesx <- list()
-  for(i in 1:length(cons$stats)) {
+  for (i in 1:length(cons$stats)) {
     mm <- cons$stats[[i]]$moduleMembership
-    if(!is.null(annot)) {
-      mm <- rename_by2(mm, annot, rename)
-    }
+    if (!is.null(annot)) mm <- rename_by2(mm, annot, rename)
     gg <- rownames(mm)
     mm <- as.list(data.frame(mm))
     if (!is.null(module)) mm <- mm[module]
@@ -358,16 +330,16 @@ getTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, ntop=40,
   }
   topgenes <- lapply(topgenes, head, ntop)
 
-  if(!is.null(module)) {
+  if (!is.null(module)) {
     sel <- intersect(names(topgenes),module)
     topgenes <- topgenes[sel]
   }
 
   ## top genesets (as symbol!)
   topsets <- NULL
-  if(any(c("gse","gsea") %in% names(cons))) {
-    if(!is.null(cons$gsea)) ee <- cons$gsea
-    if(!is.null(cons$gse)) ee <- cons$gse
+  if (any(c("gse","gsea") %in% names(cons))) {
+    if (!is.null(cons$gsea)) ee <- cons$gsea
+    if (!is.null(cons$gse)) ee <- cons$gse
     ee <- ee[match(names(topgenes),names(ee))]
     names(ee) <- names(topgenes)
     topsets <- lapply(ee,function(x) head(rownames(x),ntop))
@@ -387,15 +359,10 @@ getTopGenesAndSets <- function(wgcna, annot=NULL, module=NULL, ntop=40,
     topgenes <- NULL
   }
 
-  list(sets = topsets, genes = topgenes, pheno = toppheno)
+  return(list(sets = topsets, genes = topgenes, pheno = toppheno))
 }
 
-## ----------------------------------------------------------------------
-## ----------------------------------------------------------------------
-## ----------------------------------------------------------------------
-
 #' Describe WGCNA modules using LLM
-#'
 #' @param wgcna A WGCNA result object.
 #' @param ntop Number of top entries.
 #' @param psig P-value significance threshold.
