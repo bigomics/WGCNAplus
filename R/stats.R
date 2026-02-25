@@ -19,14 +19,13 @@ cortest <- function(X, Y) {
 }
 
 #' Compute general feature statistics after WGCNA results.
-#'
 #' @param net WGCNA network object with MEs and colors.
 #' @param datExpr Expression data matrix.
 #' @param datTraits Trait data matrix.
 #' @param TOM Topological overlap matrix or NULL.
 #' @return List of gene statistic matrices.
 computeGeneStats <- function(net, datExpr, datTraits, TOM) {
-  ## align
+
   kk <- intersect(rownames(datExpr), rownames(datTraits))
   datExpr <- datExpr[kk, , drop = FALSE]
   datTraits <- datTraits[kk, , drop = FALSE]
@@ -54,7 +53,6 @@ computeGeneStats <- function(net, datExpr, datTraits, TOM) {
   foldChange <- NULL
   foldChangePvalue <- NULL
   is.binary <- apply(datTraits, 2, function(a) length(unique(a[!is.na(a)])) == 2)
-  is.binary
   binY <- NULL
   if (any(is.binary)) {
     binY <- datTraits[, which(is.binary), drop = FALSE]
@@ -63,7 +61,6 @@ computeGeneStats <- function(net, datExpr, datTraits, TOM) {
   }
   if (!is.null(binY) && NCOL(binY) > 0) {
     lm <- list()
-    i <- 1
     for (i in 1:ncol(binY)) {
       y <- 1 * binY[, i]
       X <- t(datExpr)
@@ -90,7 +87,6 @@ computeGeneStats <- function(net, datExpr, datTraits, TOM) {
   contY <- datTraits[, which(!is.binary), drop = FALSE]
   foldChange.cont <- NULL
   foldChangePvalue.cont <- NULL
-  dim(contY)
   if (NCOL(contY) > 0) {
     contlm <- apply(contY, 2, function(y) {
       tt <- cortest(datExpr, y)
@@ -119,18 +115,14 @@ computeGeneStats <- function(net, datExpr, datTraits, TOM) {
   ## using TOM matrix. WARNING: this can create large TOM matrix
   geneCentrality <- NULL
   if (!is.null(TOM)) {
-    if(nrow(TOM) != ncol(TOM)) {
-      TOM <- TOM %*% Matrix::t(TOM)
-    }
+    if (nrow(TOM) != ncol(TOM)) TOM <- TOM %*% Matrix::t(TOM)
     if (is.null(dimnames(TOM))) {
       dimnames(TOM) <- list(colnames(datExpr), colnames(datExpr))
     }
     diag(TOM) <- 0
     TOM[which(abs(TOM) < 0.01)] <- 0
-    gr <- igraph::graph_from_adjacency_matrix(
-      TOM,
-      mode = "undirected", weighted = TRUE, diag = FALSE
-    )
+    gr <- igraph::graph_from_adjacency_matrix(TOM, mode = "undirected",
+      weighted = TRUE, diag = FALSE)
     geneCentrality <- rep(NA, nrow(TOM))
     names(geneCentrality) <- rownames(TOM)
     me.genes <- tapply(names(net$colors), net$colors, list)
@@ -173,10 +165,10 @@ computeGeneStats <- function(net, datExpr, datTraits, TOM) {
   )
 
   return(stats)
+
 }
 
 #' Get gene statistics for a trait and module
-#'
 #' @param wgcna WGCNA result object or NULL.
 #' @param trait Trait name or names.
 #' @param module Module name to filter or NULL.
@@ -188,9 +180,16 @@ computeGeneStats <- function(net, datExpr, datTraits, TOM) {
 #' @param main Plot title string or NULL.
 #' @return Data frame of gene statistics.
 #' @export
-getGeneStats <- function(wgcna, trait, module = NULL, plot = TRUE,
-                         stats = NULL, labels = NULL, showlogFC = TRUE,
-                         col = NULL, main = NULL) {
+getGeneStats <- function(wgcna,
+                         trait,
+                         module = NULL,
+                         plot = TRUE,
+                         stats = NULL,
+                         labels = NULL,
+                         showlogFC = TRUE,
+                         col = NULL,
+                         main = NULL) {
+
   if (!is.null(stats)) {
     features <- rownames(stats[["moduleMembership"]])
     if (is.null(stats)) stop("must give stats")
@@ -213,11 +212,7 @@ getGeneStats <- function(wgcna, trait, module = NULL, plot = TRUE,
   p2 <- c("traitSignificance", "TSPvalue", "foldChange", "foldChangePvalue")
   p3 <- c("geneCentrality")
 
-  df <- data.frame(
-    feature = features,
-    module = labels
-  )
-  head(df)
+  df <- data.frame(feature = features, module = labels)
 
   ## get moduleMembership
   mm.stats <- stats[p1]
@@ -254,13 +249,11 @@ getGeneStats <- function(wgcna, trait, module = NULL, plot = TRUE,
   ## calculate score
   sel <- c("moduleMembership", "traitSignificance", "foldChange", "centrality")
   sel <- intersect(sel, colnames(df))
-  # df1 <- pmax(as.matrix(df[, sel]), 1e-8)
   df1 <- as.matrix(abs(df[, sel]))
   score <- exp(rowMeans(log(1e-8 + df1))) * sign(df[, "foldChange"])
   df <- data.frame(df[, 1:2], score = score, df[, -c(1, 2)])
 
   if (!is.null(module)) {
-    ## sel <- which(df$module == module)
     sel <- grep(paste0(module, "$"), df$module)
     df <- df[sel, , drop = FALSE]
   }
@@ -271,9 +264,7 @@ getGeneStats <- function(wgcna, trait, module = NULL, plot = TRUE,
 
   if (plot) {
     cols <- c("moduleMembership", "traitSignificance")
-    if (showlogFC) {
-      cols <- c(cols, "foldChange", "centrality")
-    }
+    if (showlogFC) cols <- c(cols, "foldChange", "centrality")
     cols <- intersect(cols, colnames(df))
     df1 <- df[, cols]
     col1 <- labels2colors(labels[rownames(df1)])
@@ -286,19 +277,21 @@ getGeneStats <- function(wgcna, trait, module = NULL, plot = TRUE,
   }
 
   rownames(df) <- df$feature
-  df
+
+  return(df)
+
 }
 
 #' Calculate compound significance scores per gene
-#'
 #' @param wgcna WGCNA result object with stats.
 #' @return Data frame of compound significance scores.
 #' @export
 calculateCompoundSignificance <- function(wgcna) {
+
   Q <- list()
   ww <- list(gx = wgcna)
-  if(!is.null(wgcna$layers)) ww <- wgcna$layers    
-  for(k in names(ww)) {
+  if (!is.null(wgcna$layers)) ww <- wgcna$layers    
+  for (k in names(ww)) {
     stats <- ww[[k]]$stats
     m1 <- stats$moduleMembership
     t1 <- stats$traitSignificance
@@ -312,16 +305,19 @@ calculateCompoundSignificance <- function(wgcna) {
     Q1 <- Q1[order(-Q1$score2),]
     Q[[k]] <- Q1
   }
-  if(length(ww)==1) Q <- Q[[1]]
-  Q
+
+  if (length(ww)==1) Q <- Q[[1]]
+
+  return(Q)
+
 }
 
 #' Compute gene statistics with consensus colors per layer
-#'
 #' @param cons Consensus WGCNA result object.
 #' @return List of gene statistics per layer.
 #' @export
 computeConsensusGeneStats <- function(cons) {
+
   k <- names(cons$layers)[1]
   stats <- list()
   for(k in names(cons$layers)) {
@@ -332,31 +328,35 @@ computeConsensusGeneStats <- function(cons) {
     stats[[k]] <- computeGeneStats(
       wnet, w$datExpr, w$datTraits, TOM=NULL)
   }
+  
   return(stats)
+
 }
 
 
 #' Get consensus gene statistics across layers
-#'
 #' @param cons Consensus WGCNA result object.
 #' @param stats Precomputed consensus stats list.
 #' @param trait Trait name to extract.
 #' @param module Module name to filter or NULL.
 #' @return List with consensus and full data frames.
 #' @export
-getConsensusGeneStats <- function(cons, stats, trait, module=NULL) {
+getConsensusGeneStats <- function(cons,
+                                  stats,
+                                  trait,
+                                  module = NULL) {
 
   ## create extended color vector
   labels = paste0("ME",cons$net$colors)
   gstats <- list()
-  for(k in names(stats)) {
+  for (k in names(stats)) {
     gstats[[k]] <- getGeneStats(
       wgcna = NULL,
       stats = stats[[k]],
       labels = labels,
       trait = trait,
       plot = FALSE,
-      module = module,
+      module = module,A
       col = NULL,
       main = NULL
     )
@@ -364,7 +364,7 @@ getConsensusGeneStats <- function(cons, stats, trait, module=NULL) {
 
   ## Align rows
   ff <- gstats[[1]]$feature
-  for(k in names(gstats)) {
+  for (k in names(gstats)) {
     ii <- match(ff, gstats[[k]]$feature)
     gstats[[k]] <- gstats[[k]][ii,]
   }
@@ -378,35 +378,32 @@ getConsensusGeneStats <- function(cons, stats, trait, module=NULL) {
   xcols <- c("score","moduleMembership","traitSignificance","foldChange")
   pcols <- c("scorePvalue","MMPvalue","TSPvalue","foldChangePvalue")
   pcols1 <- pcols[-1]
-  for(i in 1:length(gstats)) {
+
+  for (i in 1:length(gstats)) {
     gstats[[i]][,'scorePvalue'] <- apply(gstats[[i]][,pcols1],1,max,na.rm=TRUE)
   }
-  ##xc <- lapply(gstats, function(x) log(abs(x[,xcols])*(x[,pcols]<0.05)))
+
   xc <- lapply(gstats, function(x) log(abs(x[,xcols])))
   xc <- exp(Reduce('+', xc) / length(xc))
   xp <- Reduce(pmax, lapply(gstats, function(x) x[,pcols]))
   df3 <- data.frame( gstats[[1]][,1:2], xc, xp)
   df3 <- df3[,colnames(gstats[[1]])]
-  head(df3)
 
   ## Determine consensus status. Feature is 'C' (concordant) if sign
   ## in all layers are equal and significant. 'D' (discordant) if sign
-  ## if not equal in all layers but significant. 'N' is any is
-  ## non-significant.
+  ## if not equal in all layers but significant. 'N' is any is non-significant.
   sign.pos <- Reduce('*',lapply(gstats,function(g) sign(g$score) == 1))
   sign.neg <- Reduce('*',lapply(gstats,function(g) sign(g$score) == -1))
   allsig   <- Reduce('*',lapply(gstats,function(g) (g$scorePvalue) < 0.05))
-  table(allsig)
   consensus <- c("D","C")[ 1 + 1*(sign.pos | sign.neg)]
   consensus[which(allsig==0)] <- 'N'
   cons.df <- data.frame(df3[,1:2], consensus, df3[,-c(1,2)])
-  head(cons.df)
 
   ## This creates the full stats matrix (all subgroups)
   df1 <- gstats[[1]][,c("feature","module")]
   df2 <- gstats[[1]][,0]
   cols <- colnames(gstats[[1]])[-c(1:2)]
-  for(k in cols ) {
+  for (k in cols ) {
     xx <- sapply(gstats, function(g) g[,k])
     df2[[k]] <- I(xx)
   }
@@ -415,13 +412,10 @@ getConsensusGeneStats <- function(cons, stats, trait, module=NULL) {
   colnames(df2) <- newcols
   full.df <- data.frame(df1, consensus=cons.df$consensus, df2)
 
-  ## sort??
   ii <- order(-cons.df$score * sign(mean(cons.df$score,na.rm=TRUE)))
-  cons.df <- cons.df[ii,]
-  full.df <- full.df[ii,]
-
-  list(
-    consensus = cons.df,
-    full = full.df
-  )
+  cons.df <- cons.df[ii, ]
+  full.df <- full.df[ii, ]
+  
+  return(list(consensus = cons.df, full = full.df))
+  
 }
