@@ -73,7 +73,6 @@ create_report <- function(wgcna,
   results <- NULL
   if (ai_model != "") {
     if (verbose) message("Simmering modules...")
-    k=1
     for (k in names(descriptions)) {
       ss <- descriptions[[k]]
       q2 <-  paste("Following are descriptions of a certain WGCNA module by one or more LLMs. Create a consensus conclusion out of the independent descriptions. Describe the underlying biology, relate correlated phenotypes and mention key genes, proteins or metabolites. Just answer, no confirmation, use 1-2 paragraphs. Use prose as much as possible, do not use tables or bullet points.\n\n", ss)
@@ -360,6 +359,7 @@ getTopGenesAndSets <- function(wgcna,
   }
 
   return(list(sets = topsets, genes = topgenes, pheno = toppheno))
+
 }
 
 #' Describe WGCNA modules using LLM
@@ -377,38 +377,33 @@ getTopGenesAndSets <- function(wgcna,
 #' @param level Feature level: "gene" or "geneset".
 #' @return List with prompt, questions, and answers.
 #' @export
-describeModules <- function(wgcna, ntop=50, psig = 0.05,
-                            annot=NULL, multi=FALSE, modules=NULL,
-                            experiment="", verbose=1, 
-                            model=getOption("WGCNAplus.default_llm"),
-                            docstyle = "detailed summary", numpar = 2,
-                            level="gene")  {
-  if(0) {
-    ntop=50; psig = 0.05;
-    annot=NULL; multi=FALSE; modules=NULL;
-    experiment=""; verbose=1; 
-    model=getOption("WGCNAplus.default_llm");
-    docstyle = "detailed summary"; numpar = 2;
-    level="gene"
-  }
+describeModules <- function(wgcna,
+                            ntop = 50,
+                            psig = 0.05,
+                            annot = NULL,
+                            multi = FALSE,
+                            modules = NULL,
+                            experiment = "",
+                            verbose = 1, 
+                            model = getOption("WGCNAplus.default_llm"),
+                            docstyle = "detailed summary",
+                            numpar = 2,
+                            level = "gene")  {
   
-  if(is.null(annot)) {
+  if (is.null(annot)) {
     message("[describeModules] WARNING. user annot table is recommended.")
   }
 
   top <- getTopTables(wgcna, annot=annot, ntop=ntop,
     psig=psig, level=level, rename="gene_title")
 
-  if(is.null(modules)) {
+  if (is.null(modules)) {
     modules <- union(names(top$genes), names(top$sets))
   }
 
-  if(is.null(experiment)) experiment <- ""
-  ##if(!is.null(top$genes)) modules <- intersect(modules, names(top$genes))
-  ##if(!is.null(top$sets)) modules <- intersect(modules, names(top$sets))
-  ##modules <- intersect(modules, names(top$pheno))
+  if (is.null(experiment)) experiment <- ""
 
-  if(length(modules)==0) {
+  if (length(modules)==0) {
     info("[describeModules] warning: empty module list!")
     return(NULL)
   }
@@ -417,35 +412,41 @@ describeModules <- function(wgcna, ntop=50, psig = 0.05,
   model <- setdiff(model, c("", NA))
   if (is.null(model) || length(model) == 0) {
     desc <- list()
-    for(m in modules) {
+    for (m in modules) {
+
       ss=gg=pp="<none>"
 
-      if(!is.null(top$genes[[m]])) {
+      if (!is.null(top$genes[[m]])) {
         gg <- paste( top$genes[[m]], collapse=', ')
       }
-      if(!is.null(top$sets[[m]])) {
+
+      if (!is.null(top$sets[[m]])) {
         ss <- paste( sub(".*:","",top$sets[[m]]), collapse='; ')
       }
-      if(m %in% names(top$pheno)) {
+
+      if (m %in% names(top$pheno)) {
         pp <- paste( top$pheno[[m]], collapse='; ')
       }
+
       d <- ""
-      if(!is.null(pp)) d <- paste(d, "**Correlated phenotypes**:", pp, "\n\n")
-      if(!is.null(gg) && gg!="") {
+      if (!is.null(pp)) d <- paste(d, "**Correlated phenotypes**:", pp, "\n\n")
+
+      if (!is.null(gg) && gg != "") {
         d <- paste(d, "**Key genes**:", gg, "\n\n")
       }
-      if(!is.null(ss) && ss!="") {
+
+      if (!is.null(ss) && ss != "") {
         d <- paste(d, "**Top enriched gene sets**:", ss, "\n\n")
       }
+
       desc[[m]] <- d
+
     }
 
-    res <- list(
-      prompt = NULL,
-      questions = NULL,
-      answers = desc
-    )
+    res <- list(prompt = NULL, questions = NULL, answers = desc)
+
     return(res)
+
   }
 
   prompt <- paste("Give a",docstyle,"of the main overall biological function of the following top enriched genesets belonging to module <MODULE>. After that, shortly discuss if any of these key genes/proteins/metabolites might be involved in the biological function. No need to mention all, just a few. Discuss the possible relationship with phenotypes <PHENOTYPES> of this experiment about \"<EXPERIMENT>\". Use maximum",numpar,"paragraphs. Use prose, do not use any bullet points or tables. \n\nHere is list of enriched gene sets:\n <GENESETS>\n\n")
@@ -460,21 +461,21 @@ describeModules <- function(wgcna, ntop=50, psig = 0.05,
     if (verbose > 0) message("Describing module ", k)
 
     ss=gg=pp=""
-    if(length(top$sets[[k]])>0) {
+    if (length(top$sets[[k]])>0) {
       ss <- sub( ".*:","", top$sets[[k]] ) ## strip prefix
       ss <- paste(ss, collapse=';')
     } else {
       ss <- "[no significant genesets]"
     }
 
-    if(k %in% names(top$pheno)) {
+    if (k %in% names(top$pheno)) {
       pp <- paste0("'",top$pheno[[k]],"'")
       pp <- paste( pp, collapse=';')
     }
 
     q <- prompt
 
-    if(length(top$genes[[k]])>0) {
+    if (length(top$genes[[k]])>0) {
       gg <- paste( top$genes[[k]], collapse=';')
       q <- paste(q, "\nHere is the list of key genes/proteins/metabolites: <KEYGENES>\n")
     }
@@ -498,16 +499,13 @@ describeModules <- function(wgcna, ntop=50, psig = 0.05,
     questions[[k]] <- q
   }
 
-  res <- list(
-    prompt = prompt,
-    questions = questions,
-    answers = desc
-  )
+  res <- list(prompt = prompt, questions = questions, answers = desc)
+  
   return(res)
+
 }
 
 #' Get top correlated modules
-#'
 #' @param wgcna A WGCNA result object.
 #' @param topratio Ratio threshold for top selection.
 #' @param kx Power exponent for ranking.
@@ -515,10 +513,13 @@ describeModules <- function(wgcna, ntop=50, psig = 0.05,
 #' @param multi Use multi-omics mode.
 #' @return Character vector of top module names.
 #' @export
-getTopModules <- function(wgcna, topratio=0.85, kx=4, rm.grey=TRUE,
-                          multi=FALSE) {
+getTopModules <- function(wgcna,
+                          topratio = 0.85,
+                          kx = 4,
+                          rm.grey = TRUE,
+                          multi = FALSE) {
 
-  if(!multi) {
+  if (!multi) {
     ww <- list(gx = wgcna)  ## single-omics wgcna object
   } else if(!is.null(wgcna$layers)) {
     ww <- wgcna$layers
@@ -527,34 +528,34 @@ getTopModules <- function(wgcna, topratio=0.85, kx=4, rm.grey=TRUE,
   }
 
   M <- list()
-  i=1
-  for(i in 1:length(ww)) {
+  for (i in 1:length(ww)) {
     me <- ww[[i]]$net$MEs
     dt <- ww[[i]]$datTraits
     M[[i]] <- cor(me, dt, use="pairwise")
   }
 
   top.modules <- c()
-  i=1
-  for(i in 1:length(M)) {
+  for (i in 1:length(M)) {
     mx <- rowMeans(abs(M[[i]]**kx),na.rm=TRUE)**(1/kx)
     tt <- names(which( mx > topratio * max(mx)))
     top.modules <- c(top.modules, tt)
   }
 
-  if(rm.grey) {
+  if (rm.grey) {
     sel.grey <- grepl("[A-Z]{2}grey$",top.modules)
     top.modules <- top.modules[!sel.grey]
   }
-  top.modules
+  
+  return(top.modules)
+
 }
 
 #' Correct common DOT diagram issues
-#'
 #' @param diagram DOT diagram string.
 #' @return Corrected DOT diagram string.
 #' @keywords internal
 correct_dot_diagram <- function(diagram) {
+
   ## force as digraph
   diagram <- sub("^graph","digraph",diagram)
 
@@ -575,13 +576,14 @@ correct_dot_diagram <- function(diagram) {
   # match 3- or 6-digit hex color with replace with quoted version
   diagram <- gsub("(?<!['\"])\\b(#(?:[0-9A-Fa-f]{3}){1,2})\\b(?!['\"])",
     "\"\\1\"", diagram, perl = TRUE )
-  diagram
+
+  return(diagram)
+
 }
 
 
 #' Create DOT string object from graph object for sending to
 #' LLM. Clean unneeded attributes.
-#'
 #' @param graph An igraph object.
 #' @return DOT format string.
 #' @keywords internal
@@ -589,33 +591,36 @@ graph2dot <- function(graph) {
 
   aa <- names(igraph::vertex_attr(graph))
   aa <- intersect(aa, c("layer","fc","value"))
-  for(a in aa)  graph <- igraph::delete_vertex_attr(graph, a)
+  for (a in aa)  graph <- igraph::delete_vertex_attr(graph, a)
 
   bb <- names(igraph::edge_attr(graph))
   bb <- intersect(bb, c("rho","connection_type"))
-  for(b in bb)  graph <- igraph::delete_edge_attr(graph, b)
+  for (b in bb)  graph <- igraph::delete_edge_attr(graph, b)
 
   file <- tempfile(fileext = ".dot")
   igraph::write_graph(graph, file=file, format="dot")
   dot <- readChar(file, file.info(file)$size)
   unlink(file)
-  dot
+
+  return(dot)
+
 }
 
 #' Change layout of DOT string object
-#'
 #' @param dot DOT format string.
 #' @param dir Direction: "TB" or "LR".
 #' @return Modified DOT string.
 #' @keywords internal
 dot.rankdir <- function(dot, dir) {
-  if(dir=="TB") dot <- sub("rankdir=LR","rankdir=TB",dot)
-  if(dir=="LR") dot <- sub("rankdir=TB","rankdir=LR",dot)
-  dot
+
+  if (dir=="TB") dot <- sub("rankdir=LR","rankdir=TB",dot)
+  if (dir=="LR") dot <- sub("rankdir=TB","rankdir=LR",dot)
+
+  return(dot)
+
 }
 
 #' Create module diagram in DOT format
-#'
 #' @param wgcna_report Report text string.
 #' @param ai_model LLM model name string.
 #' @param graph Optional graph template.
@@ -624,10 +629,14 @@ dot.rankdir <- function(dot, dir) {
 #' @param double.check Validate DOT with DiagrammeR.
 #' @return DOT diagram string.
 #' @export
-create_diagram <- function(wgcna_report, ai_model, graph=NULL,
-                           rankdir="TB", correct=TRUE, double.check=TRUE) {
+create_diagram <- function(wgcna_report,
+                           ai_model,
+                           graph = NULL,
+                           rankdir = "TB",
+                           correct = TRUE,
+                           double.check = TRUE) {
 
-  if(!is.null(graph)) {
+  if (!is.null(graph)) {
     ## If we pass a graph (from e.g. Lasagna) we tell the LLM to use
     ## the graph as starting point or template. This constrains the
     ## connections and minimizes 'hallucinations'
@@ -655,21 +664,19 @@ Layout in TB direction. Do not use any special characters, without headers or fo
   diagram <- gsub("mermaid\n|dot\n","",aa)
   diagram <- gsub("&","and",diagram)
   diagram <- dot.rankdir(diagram, dir=rankdir)
-  if(correct) {
-    diagram <- correct_dot_diagram(diagram)
-  }
+  if (correct) diagram <- correct_dot_diagram(diagram)
 
-  if(double.check) {
+  if (double.check) {
     if (!requireNamespace("DiagrammeR", quietly = TRUE)) stop("Package 'DiagrammeR' is required")
     if (!requireNamespace("DiagrammeRsvg", quietly = TRUE)) stop("Package 'DiagrammeRsvg' is required")
     code.error <- TRUE
     ntry <- 1
-    while(code.error && ntry <= 5) {
+    while (code.error && ntry <= 5) {
       ## check valid code
       dg <- DiagrammeR::grViz(diagram)
       out <- try(DiagrammeRsvg::export_svg(dg))
       code.error <- inherits(out, "try-error")
-      if(code.error) {
+      if (code.error) {
         ## try to correct
         diagram <- ai.ask(paste("Please double check the following DOT diagram code and correct. If the code is correct, do not change anything. Just return the corrected clean code:",diagram), model = ai_model)
         ntry <- ntry + 1
@@ -684,7 +691,6 @@ Layout in TB direction. Do not use any special characters, without headers or fo
 #' an infographic by calling Gemini3. The genAI model is given the
 #' report and asked to adhere to the included or external given
 #' diagram (in DOT format).
-#'
 #' @param report Report text string.
 #' @param diagram Optional DOT diagram string.
 #' @param prompt Optional custom prompt.
@@ -692,26 +698,27 @@ Layout in TB direction. Do not use any special characters, without headers or fo
 #' @param filename Output PNG filename.
 #' @return Path to output image file.
 #' @export
-create_infographic <- function(report,  diagram=NULL, prompt=NULL,
-                               #model = "gemini-2.5-flash-image"
-                               model="gemini-3-pro-image-preview",
+create_infographic <- function(report,
+                               diagram = NULL,
+                               prompt = NULL,
+                               model = "gemini-3-pro-image-preview",
                                filename = "infographic.png",
-                               api_key = Sys.getenv("GEMINI_API_KEY") 
-                               ) {
+                               api_key = Sys.getenv("GEMINI_API_KEY")) {
 
   prompt <- paste(prompt, "\nCreate a graphical abstract according to the given diagram and information in the WGCNA report. Use scientific visual style like Nature journals. Illustrate biological concepts with small graphics. \n\n", report, "\n---------------\n\n", diagram)
 
   outfile <- try(ai.create_image_gemini(
     prompt = prompt,  model = model,
     format = "file", filename = filename,
-    api_key = api_key
-  ))
-  if(inherits(outfile,"try-error")) return(NULL)
+    api_key = api_key))
+
+  if (inherits(outfile,"try-error")) return(NULL)
+
   return(invisible(outfile))
+
 }
 
 #' Create infographic for a single module
-#'
 #' @param rpt Report object from create_report.
 #' @param module Module name string.
 #' @param prompt Optional custom prompt.
@@ -719,18 +726,23 @@ create_infographic <- function(report,  diagram=NULL, prompt=NULL,
 #' @param filename Output PNG filename.
 #' @return Path to output image file.
 #' @export
-create_module_infographic <- function(rpt, module, prompt = NULL,
-                                      #model = "gemini-2.5-flash-image"
-                                      model="gemini-3-pro-image-preview",
+create_module_infographic <- function(rpt,
+                                      module,
+                                      prompt = NULL,
+                                      model = "gemini-3-pro-image-preview",
                                       filename = "module-infographic.png",
-                                      api_key = Sys.getenv("GEMINI_API_KEY") 
-                                      ) {
-  if(!module %in% names(rpt$summaries)) {
+                                      api_key = Sys.getenv("GEMINI_API_KEY")) {
+
+  if (!module %in% names(rpt$summaries)) {
     stop(paste("module",m,"not in report summaries"))
   }
+
   mm <- paste0("**",module,"**: ",rpt$summaries[[module]])
+
   prompt <- paste(prompt, "Create an infographic summarizing the biological narrative of the following WGCNA module. Use scientific visual style like Nature journals. Illustrate biological concepts with small graphics. Match the background with the name of the module with a very light shade. Include the module name in the title or image. \n\n", mm)
   outfile <- ai.create_image_gemini(prompt, model, filename = filename, api_key = api_key)
   message("saving to ", outfile)
+
   return(invisible(outfile))
+
 }
