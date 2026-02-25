@@ -213,10 +213,9 @@ runConsensusWGCNA <- function(exprList,
   }
 
   ## run enrichment
-  if(compute.enrichment && !is.null(GMT)) {
-    if(!is.null(progress)) progress$inc(0.2, "Computing enrichment...")
+  if (compute.enrichment && !is.null(GMT)) {
     message("[runConsensusWGCNA] >>> computing module enrichment...")
-    if(!is.null(annot)) GMT <- rename_by2(GMT, annot, "symbol")
+    if (!is.null(annot)) GMT <- rename_by2(GMT, annot, "symbol")
     res$gsea <- computeConsensusModuleEnrichment(
       res,
       GMT = GMT,
@@ -227,7 +226,7 @@ runConsensusWGCNA <- function(exprList,
     )
   }
 
-  if(summary) {
+  if (summary) {
     message("Annotating modules using ", ai_model)
     ai <- describeModules(
       res,
