@@ -77,7 +77,7 @@ computeWGCNA <- function(X,
 
   ## restrict number of genes
   if (ngenes > 0 && nrow(X) > ngenes) {
-    if (is.null(is.multiomics)) is.multiomics <- all(grepl(":", rownames(X))) ## not robust!!
+    if (is.null(is.multiomics)) is.multiomics <- all(grepl(":", rownames(X)))
     if (is.multiomics) {
       message("[compute] topSD = ", ngenes, " (multi-omics)")
       X <- mofa.topSD(X, ngenes)
@@ -344,13 +344,13 @@ computeModules <- function(datExpr,
   }
 
   clustMethod <- sub("^ward$", "ward.D", clustMethod)
-  ## define distance matrix
+
   if (is.null(TOM)) {
     adjacency <- WGCNA::adjacency(datExpr, power = power, type = networkType)
     adjacency[is.na(adjacency)] <- 0
     if (calcMethod == "fast") {
       if (verbose > 0) message("[computeModules] Computing TOM matrix using fast method...")
-      TOM <- fastTOMsimilarity(adjacency, tomtype = TOMType, lowrank = lowrank)
+      TOM <- fastTOMsimilarity(adjacency, lowrank = lowrank)
     } else if (calcMethod == "adjacency") {
       if (verbose > 0) message("[computeModules] Computing using adjacency as TOM matrix...")
       TOM <- adjacency
@@ -413,7 +413,6 @@ computeModules <- function(datExpr,
     stop("ERROR: could not determine cutMethod")
   }
   label <- as.integer(label)
-  table(label)
   nmodules <- length(unique(label))
   if (verbose > 0) message("Found ", nmodules, " modules")
 
@@ -455,7 +454,6 @@ computeModules <- function(datExpr,
   if (mergeCutHeight > 0 && length(MEs) > 1) {
     if (verbose > 0) message("Merging similar modules: mergeCutHeight = ", mergeCutHeight)
     merge <- mergeCloseModules(datExpr, colors, cutHeight = mergeCutHeight, MEs = MEs)
-    unmergedColors <- colors
     colors <- merge$colors
     MEs <- merge$MEs
     if (verbose > 0) {
@@ -468,7 +466,6 @@ computeModules <- function(datExpr,
   ## filter on minModuleSize
   if (minModuleSize > 1) {
     too.small <- names(which(table(colors) < minModuleSize))
-    too.small
     if (length(too.small)) {
       if (verbose > 0) message("Removing ", length(too.small), " too small modules")
       colors[colors %in% too.small] <- "grey"
@@ -530,22 +527,15 @@ computeModules <- function(datExpr,
 
 #' Faster implementation of TOM computation using low-rank SVD approximation.
 #' @param A Adjacency matrix.
-#' @param tomtype TOM type (signed/unsigned).
 #' @param lowrank Low-rank approximation dimension.
 #' @return TOM similarity matrix.
 #' @keywords internal
-fastTOMsimilarity <- function(A,
-                              tomtype = "signed",
-                              lowrank = 20) {
+fastTOMsimilarity <- function(A, lowrank = 20) {
 
   # https://stackoverflow.com/questions/56574729
   # Given square symmetric adjacency matrix A, its possible to
   # calculate the TOM matrix W without the use of for loops, which
   # speeds up the process tremendously
-
-  if (!tomtype %in% c("signed", "unsigned")) {
-    stop("only works for signed and unsigned tomtype")
-  }
 
   ## Adjacency matrix A can be approximated with SVD.
   ## This can make TOM calculation much faster.
@@ -571,7 +561,7 @@ fastTOMsimilarity <- function(A,
   diag(W) <- 1
   W <- as.matrix(W)
   dimnames(W) <- dimnames(A)
-  W <- pmax(W, 0) ## sometimes has negative values...
+  W <- pmax(W, 0)
 
   return(W)
 
@@ -592,7 +582,6 @@ mergeCloseModules <- function(datExpr,
 
   if (is.null(MEs)) {
     MEs <- WGCNA::moduleEigengenes(datExpr, colors = colors)$eigengenes
-    dim(MEs)
   }
 
   hc <- hclust(as.dist(1 - cor(MEs)), method = "average")
