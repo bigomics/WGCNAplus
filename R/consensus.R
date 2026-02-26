@@ -206,7 +206,7 @@ runConsensusWGCNA <- function(exprList,
 
   ## run stats
   if (compute.stats) {
-    message("[runConsensusWGCNA] >>> computing gene statistics...")
+    message("[runConsensusWGCNA] >>> computing consensus stats...")
     res$stats <- computeConsensusGeneStats(res)
   }
 
