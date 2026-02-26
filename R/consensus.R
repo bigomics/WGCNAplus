@@ -145,8 +145,7 @@ runConsensusWGCNA <- function(exprList,
   ## add labels to dendrogram
   for (i in 1:length(cons$dendrograms)) {
     ii <- which(cons$goodGenes & cons$blocks == i)
-    xnames <- names(cons$colors)
-    cons$dendrograms[[i]]$labels <- xnames[ii]
+    cons$dendrograms[[i]]$labels <- names(cons$colors)[ii]
   }
 
   ## merge dendrograms
