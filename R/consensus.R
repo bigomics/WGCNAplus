@@ -79,7 +79,7 @@ runConsensusWGCNA <- function(exprList,
   }
 
   multiExpr <- WGCNA::list2multiData(lapply(exprList, Matrix::t))
-  cor <- WGCNA::cor ## needed...
+  cor <- WGCNA::cor
 
   if (!is.null(power) && length(power) == 1) {
     power <- rep(power, length(multiExpr))
@@ -379,17 +379,17 @@ matchColors <- function(wgcna, refcolors) {
   old2new <- c(old2new, old2newME)
 
   newcol <- function(x) {
-    array( old2new[x], dimnames = list(names(x)))
+    array(old2new[x], dimnames = list(names(x)))
   }
 
   ## rename everything in net object
   wgcna$net$colors <- newcol(wgcna$net$colors)
-  if("labels" %in% names(wgcna$net)) {
+  if ("labels" %in% names(wgcna$net)) {
     wgcna$net$labels <- newcol(wgcna$net$labels)
   }
 
   ## rename unmergedColors
-  if("unmergedColors" %in% names(wgcna$net)) {
+  if ("unmergedColors" %in% names(wgcna$net)) {
     wgcna$net$unmergedColors <- newcol(wgcna$net$unmergedColors)
   }
   names(wgcna$net$MEs) <- newcol(names(wgcna$net$MEs))
@@ -399,12 +399,12 @@ matchColors <- function(wgcna, refcolors) {
   wgcna$me.colors <- newcol(wgcna$me.colors)
   names(wgcna$me.colors) <- newcol(names(wgcna$me.colors))
   colnames(wgcna$W) <- newcol(colnames(wgcna$W))
-  if(!is.null(wgcna$modTraits)) {
+  if (!is.null(wgcna$modTraits)) {
     rownames(wgcna$modTraits) <- newcol(rownames(wgcna$modTraits))
   }
 
   ## rename everything in stats object
-  if("stats" %in% names(wgcna) && !is.null(wgcna$stats)) {
+  if ("stats" %in% names(wgcna) && !is.null(wgcna$stats)) {
     rownames(wgcna$stats[['moduleTraitCor']]) <- newcol(rownames(wgcna$stats[['moduleTraitCor']]))
     rownames(wgcna$stats[['moduleTraitPvalue']]) <- newcol(rownames(wgcna$stats[['moduleTraitPvalue']]))
     colnames(wgcna$stats[['moduleMembership']]) <- newcol(colnames(wgcna$stats[['moduleMembership']]))
@@ -445,7 +445,7 @@ getModuleCrossGenes <-  function(wgcna,
   MEx <- sapply(wgcna, function(w) as.matrix(w$net$MEs))
   MEx <- do.call(cbind, MEx)
 
-  if(!is.null(modules)) {
+  if (!is.null(modules)) {
     modules <- intersect(modules, colnames(MEx))
     MEx <- MEx[,modules,drop=FALSE]
   }
