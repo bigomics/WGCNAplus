@@ -527,46 +527,6 @@ computeConsensusMatrix <- function(matlist,
 
 }
 
-#' Compute consensus matrix from list of matrices. The consensus
-#' matrix checks for consistent sign and minimal threshold for each
-#' matrix. Optionally filters on consistent p-value.
-#' @export
-#' @keywords internal
-computeDistinctMatrix <- function(matlist,
-                                  ydim,
-                                  psig = 0.05,
-                                  min.diff = 0.3,
-                                  consmax = 0) {
-
-  ## create difference module-trait matrix
-  pv <- mapply(function(z, n) WGCNA::corPvalueStudent(z, n),
-    matlist, ydim, SIMPLIFY = FALSE)
-
-  matsign <- lapply(matlist, sign)
-
-  Q <- matlist
-  for (i in 1:length(matlist)) {
-
-    notsig <- (pv[[i]] > psig)
-    Q[[i]][notsig] <- NA
-
-    ## Any entry with too small difference with others is invalid
-    refmat <- Reduce("+", matlist[-i]) / (length(matlist) - 1)
-    diff <- matlist[[i]] - refmat
-    notdiff <- (abs(diff) < min.diff)
-    Q[[i]][notdiff] <- NA
-
-    ## any entry that has consensus is invalid
-    cons <- mapply(function(P, S) (P < 0.05) * (S == matsign[[i]]),
-      pv[-i], matsign[-i], SIMPLIFY = FALSE)
-    cons <- (Reduce("+", cons) > consmax)
-    Q[[i]][cons] <- NA
-  }
-
-  return(Q)
-
-}
-
 #' Compute consensus enrichment by calculating overlapping enriched terms.
 computeConsensusModuleEnrichment <- function(cons,
                                              GMT,
