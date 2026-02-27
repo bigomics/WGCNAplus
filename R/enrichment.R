@@ -24,7 +24,7 @@ computeModuleEnrichment <- function(wgcna,
   }
 
   if (is.null(GMT)) {
-    message("ERROR: must provide GMT")
+    message("[computeModuleEnrichment] ERROR: must provide GMT")
     return(NULL)
   }
 
@@ -33,9 +33,7 @@ computeModuleEnrichment <- function(wgcna,
     gg <- lapply(layers, function(w) colnames(w$datExpr))
     ff <- list()
     for (i in 1:length(gg)) ff[[i]] <- paste0(names(layers)[i],":",gg[[i]])
-    gg <- unlist(gg)
-    ff <- unlist(ff)
-    annot <- data.frame(feature = ff, symbol = gg)
+    annot <- data.frame(feature = unlist(ff), symbol = unlist(gg))
     rownames(annot) <- NULL
   }
 
@@ -65,24 +63,21 @@ computeModuleEnrichment <- function(wgcna,
       message("[computeModuleEnrichment] WARNING. no overlapping genes for ", dtype)
       next()
     }
-
     G1 <- GMT[bg, , drop = FALSE]
+
     if (!is.null(filter)) {
       sel <- grep(filter, colnames(G1))
       if (length(sel)) G1 <- G1[, sel, drop = FALSE]
     }
+
     G1 <- G1[, which(Matrix::colSums(G1 != 0) >= min.genes), drop = FALSE]
 
-    if (nrow(G1)>=3 && ncol(G1)>=3 ) {
+    if (nrow(G1) >= 3  &&  ncol(G1) >= 3) {
       ## get eigengene members. convert to symbols.
       me.genes <- layers[[dtype]]$me.genes
       me.genes <- lapply(me.genes, function(g) probe2symbol(g, annot, query = symbol.col))
-
-      ## Get eigengene matrix
-      ME <- as.matrix(layers[[dtype]]$net$MEs)
-
       dt.gsea <- run_enrichment_methods(
-        ME = ME,
+        ME = as.matrix(layers[[dtype]]$net$MEs), ## eigengene matrix,
         me.genes = me.genes,
         GMT = G1,
         geneX = geneX,
@@ -96,14 +91,15 @@ computeModuleEnrichment <- function(wgcna,
     }
   }
 
-  dbg("[computeModuleEnrichment] done!")
   if (add.wgcna) {
     wgcna$gsea <- gsea
     out <- wgcna
   } else {
     out <- gsea
   }
-  
+
+  message("[computeModuleEnrichment] done!")
+
   return(out)
 
 }
@@ -204,10 +200,9 @@ run_enrichment_methods <- function(ME,
   gmt <- mat2gmt(GMT)
 
   if (1) {
-    ## pre-select for speed
     Pmin <- sapply(pval.list, function(P) apply(P, 1, min))
     sel <- head(order(rowMeans(apply(Pmin, 2, rank))), 5 * ntop)
-    message("[run_enrichment_methods] pre-selecting ", length(sel), " sets for fgsea/Fisher test...")
+    message("[run_enrichment_methods] preselecting ", length(sel), " sets for fgsea/Fisher test")
     sel <- rownames(Pmin)[sel]
     gmt <- gmt[sel]
   }
@@ -247,11 +242,8 @@ run_enrichment_methods <- function(ME,
     for (i in 1:ncol(rho)) {
       k <- colnames(rho)[i]
       gg <- me.genes[[k]]
-      rr <- try(gset.fisher(gg, GMT,
-        background = bg, fdr = 1,
-        min.genes = -1, verbose = 0, sort.by = "none", no.pass = 1
-      ))
-
+      rr <- try(gset.fisher(gg, GMT, background = bg, fdr = 1,
+        min.genes = -1, verbose = 0, sort.by = "none", no.pass = 1))
       if (!"try-error" %in% class(rr)) {
         rr <- rr[match(rownames(rho), rownames(rr)), ]
         rho[, i] <- rr$odd.ratio
@@ -263,7 +255,7 @@ run_enrichment_methods <- function(ME,
     rho[is.infinite(rho)] <- 2 * max(rho, na.rm = TRUE) ## Inf odd.ratio
     pval[is.na(pval)] <- 1
     rho[is.na(rho)] <- 0
-
+    
     rho.list[["fisher"]] <- rho
     pval.list[["fisher"]] <- pval
   }
@@ -318,7 +310,7 @@ run_enrichment_methods <- function(ME,
     gse.list[[k]]$genes <- set.genes
   }
 
-  dbg("[run_enrichment_methods] done!")
+  message("[run_enrichment_methods] done!")
 
   return(gse.list)
 

@@ -550,14 +550,11 @@ computeConsensusModuleEnrichment <- function(cons,
       GMT   <- rename_by2(GMT, annot, "symbol")
     }
 
-    ng <- length(intersect(rownames(geneX), rownames(GMT)))
-    if (ng == 0) {
+    symbols <- intersect(rownames(GMT), rownames(geneX))
+    if (length(symbols) == 0) {
       message("[computeConsensusModuleEnrichment] ERROR. No symbol overlap.")
       return(NULL)
     }
-
-    symbols <- intersect(rownames(GMT),rownames(geneX))
-    message("[computeConsensusModuleEnrichment] number of symbols: ", length(symbols))
     geneX <- geneX[symbols, ]
     GMT <- GMT[symbols, ]
 
@@ -572,16 +569,23 @@ computeConsensusModuleEnrichment <- function(cons,
     ## get genes in modules
     me.genes <- tapply(names(cons$net$colors), cons$net$colors, list)
     names(me.genes) <- paste0("ME",names(me.genes))
-    if(!is.null(annot)) {
+
+    if (!is.null(annot)) {
       me.genes <- lapply(me.genes, function(gg) probe2symbol(gg, annot))
     }
     me.genes <- lapply(me.genes, function(g) intersect(g, symbols))
     colnames(geneX) <- rownames(ME)
 
-    k <- names(cons$datExpr)[i]
-    gseaX[[k]] <- run_enrichment_methods(ME, me.genes = me.genes,
-      GMT= GMT, geneX = geneX, methods = methods,
-      min.genes = min.genes, ntop = ntop)
+    gseaX[[names(cons$datExpr)[i]]] <- run_enrichment_methods(
+      ME,
+      me.genes = me.genes,
+      GMT= GMT,
+      geneX = geneX,
+      methods = methods,
+      min.genes = min.genes,
+      ntop = ntop
+    )
+    
   }
 
   cons.gsea <- list()
