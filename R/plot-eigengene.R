@@ -146,13 +146,11 @@ plotEigenGeneAdjacencyHeatmap <- function(wgcna,
 
   if (add_traits) {
     sel <- colnames(Y)
-    if (!is.null(traits)) {
-      sel <- intersect(traits, sel)
-    }
+    if (!is.null(traits)) sel <- intersect(traits, sel)
     if (is.null(ME)) {
-      ME <- Y[,sel,drop=FALSE]
+      ME <- Y[, sel, drop = FALSE]
     } else {
-      ME <- mergeME(ME, Y[,sel,drop=FALSE])
+      ME <- mergeME(ME, Y[, sel, drop = FALSE])
     }
   }
 
@@ -184,10 +182,8 @@ plotEigenGeneAdjacencyHeatmap <- function(wgcna,
     names(layersign) <- names(wgcna)
     layersign[grep("^mi", names(wgcna), ignore.case = TRUE)] <- -1
     ff <- list()
-    for (k in names(wgcna)) {
-      rho <- cor(ME, Y[,phenotype], use="pairwise")[,1]
-      ff[[k]] <- layersign[k] * rho
-    }
+    rho <- cor(ME, Y[, phenotype], use = "pairwise")[, 1]
+    for (k in names(wgcna)) ff[[k]] <- layersign[k] * rho
     names(ff) <- NULL
     ff <- unlist(ff)
     ff <- 0.5 * (1 + ff)
@@ -213,8 +209,7 @@ plotEigenGeneAdjacencyHeatmap <- function(wgcna,
 
   if (justdata) return(R)
 
-  # Plot correlation heatmap matrix.
-  # ps: this plot will overwrite he dendrogram plot
+  # Plot correlation heatmap matrix. Overwrites dendrogram plot
   if (is.null(main)) main <- "Eigengene Adjacency Heatmap"
 
   if (plotDendro && plotHeatmap) {
@@ -235,6 +230,7 @@ plotEigenGeneAdjacencyHeatmap <- function(wgcna,
   } else {
     hc <- hclust(as.dist(1 - R0), method="average")
   }
+
   if (plotDendro) {
     par(cex = cex.lab)
     plot(as.dendrogram(hc), horiz = TRUE, ylab = "Eigengene dendrogram")
@@ -322,12 +318,6 @@ plotMultiEigengeneCorrelation <- function(wgcna,
       M2 <- cbind(M2, Y)
     }
 
-    if (FALSE && !addtraits && !is.null(phenotype)) {
-      y <- Y[, phenotype, drop = FALSE]
-      M1 <- cbind(M1, y)
-      M2 <- cbind(M2, y)
-    }
-
     R1 <- cor(M1, M2, use = "pairwise.complete")
 
     if (nmax > 0) {
@@ -397,8 +387,7 @@ plotEigenGeneGraph <- function(wgcna,
   }
 
   if (multi) {
-    ME <- lapply(wgcna, function(w) as.matrix(w$net$MEs))
-    ME <- mergeME(ME)
+    ME <- mergeME(lapply(wgcna, function(w) as.matrix(w$net$MEs)))
     if (add_traits)  ME <- cbind(ME, wgcna[[1]]$datTraits)
   } else {
     ME <- wgcna$net$MEs
@@ -437,13 +426,11 @@ plotEigenGeneGraph <- function(wgcna,
   igraph::V(gr)$size <- vcex * 18 * (module.size[module.name])**0.4
   igraph::V(gr)$size[is.na(igraph::V(gr)$size)] <- 0
 
-  ## par(mfrow = c(1, 1), mar = c(1, 1, 1, 1) * 0)
-  igraph::plot.igraph(
-    gr,
+  igraph::plot.igraph(gr,
     layout = igraph::layout.kamada.kawai,
     vertex.label.cex = 0.85 * labcex,
-    edge.width = 3
-  )
+    edge.width = 3)
+  
   if (!is.null(main)) title(main, line = -1.5)
 
 }
