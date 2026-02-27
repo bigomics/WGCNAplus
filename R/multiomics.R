@@ -69,7 +69,7 @@ computeWGCNA_multiomics <- function(dataX,
   }
 
   compute.enrichment <- (compute.enrichment && !is.null(GMT))
-  if(!is.null(annot) && !is.null(GMT)) {
+  if (!is.null(annot) && !is.null(GMT)) {
     GMT <- rename_by2(GMT, annot, "symbol")
   }
 
@@ -128,10 +128,6 @@ computeWGCNA_multiomics <- function(dataX,
   }
   power <- as.numeric(power)
   names(power) <- names(dataX)
-
-  if(!is.null(progress)) {
-    progress$set(message = paste("computing WGCNA modules..."), value = 0.33)
-  }
   
   ## This runs WGCNA on an expression list.
   layers <- list()
@@ -148,9 +144,9 @@ computeWGCNA_multiomics <- function(dataX,
         contrasts = contrasts,
         prefix = c("GX", "PX"),
         ngenes = ngenes,
-        power = power[1], ##??
+        power = power[1],
         minModuleSize = minmodsize,
-        deepSplit = deepsplit[1],  ##??
+        deepSplit = deepsplit[1],
         mergeCutHeight = mergeCutHeight,
         minKME = minKME[c('gx','px')],
         maxBlockSize = 9999,
@@ -207,10 +203,6 @@ computeWGCNA_multiomics <- function(dataX,
   gsea <- NULL
   if (compute.enrichment) {
     message("[compute_multiomics] computing module enrichment...")
-    if (!is.null(progress)) {
-      progress$set(message = paste("computing module enrichment..."), value = 0.66)
-    }
-
     gsea <- computeModuleEnrichment(
       wgcna = layers,
       multi = TRUE,
@@ -274,12 +266,11 @@ computeWGCNA_multiomics <- function(dataX,
   }
 
   report.out <- NULL
-  if(report) {
+  if (report) {
     dbg("[compute_multiomics] >>> creating report")
     ## Create summaries of each module.
-    if(!is.null(progress)) progress$set(message = "Creating report...", value=0.8)
-    if(!is.null(ai_model)) message("Creating report using ", ai_model)
-    if(is.null(ai_model)||ai_model=="") message("Creating dummy report")
+    if (!is.null(ai_model)) message("Creating report using ", ai_model)
+    if (is.null(ai_model)||ai_model=="") message("Creating dummy report")
     report.out <- create_report(
       layers, ai_model,
       annot = annot,
@@ -370,6 +361,7 @@ mergeME <- function(mlist,
   }
 
   if (is.mat) M <- as.matrix(M)
+
   return(M)
 
 }
