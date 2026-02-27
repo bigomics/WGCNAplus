@@ -182,7 +182,6 @@ getTopTables <- function(wgcna,
   names(level) <- names(layers)
 
   toplist <- list()
-  k <- names(layers)[1]
   for (k in names(layers)) {
     topk <- getTopGenesAndSets(layers[[k]], module = module,  annot = annot,
       ntop = ntop, psig = psig, level = level[[k]], rename = rename)
@@ -448,8 +447,6 @@ describeModules <- function(wgcna,
     return(res)
 
   }
-
-  prompt <- paste("Give a",docstyle,"of the main overall biological function of the following top enriched genesets belonging to module <MODULE>. After that, shortly discuss if any of these key genes/proteins/metabolites might be involved in the biological function. No need to mention all, just a few. Discuss the possible relationship with phenotypes <PHENOTYPES> of this experiment about \"<EXPERIMENT>\". Use maximum",numpar,"paragraphs. Use prose, do not use any bullet points or tables. \n\nHere is list of enriched gene sets:\n <GENESETS>\n\n")
 
   prompt <- paste("Give a", docstyle, "of the main overall biological function of the following top enriched genesets belonging to module <MODULE>. Discuss the possible relationship with phenotypes <PHENOTYPES> of this experiment about \"<EXPERIMENT>\". Use maximum", numpar, "paragraphs. Do not use any bullet points. \n\nHere is list of enriched gene sets: <GENESETS>\n")
 
@@ -734,10 +731,10 @@ create_module_infographic <- function(rpt,
                                       api_key = Sys.getenv("GEMINI_API_KEY")) {
 
   if (!module %in% names(rpt$summaries)) {
-    stop(paste("module",m,"not in report summaries"))
+    stop(paste("module", module, "not in report summaries"))
   }
 
-  mm <- paste0("**",module,"**: ",rpt$summaries[[module]])
+  mm <- paste0("**", module, "**: ", rpt$summaries[[module]])
 
   prompt <- paste(prompt, "Create an infographic summarizing the biological narrative of the following WGCNA module. Use scientific visual style like Nature journals. Illustrate biological concepts with small graphics. Match the background with the name of the module with a very light shade. Include the module name in the title or image. \n\n", mm)
   outfile <- ai.create_image_gemini(prompt, model, filename = filename, api_key = api_key)
