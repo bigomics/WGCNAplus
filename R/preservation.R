@@ -35,18 +35,17 @@ runPreservationWGCNA <- function(exprList,
     reference <- match(reference, names(exprList))
   }
 
+  reference.name <- "Consensus"
   if (reference > 0) {
     reference.name <- names(exprList)[reference]
-  } else {
-    reference.name <- "Consensus"
   }
-
+  
   ## multiset WGCNA
   pres <- runConsensusWGCNA(
     exprList,
     phenoData = phenoData,
     contrasts = contrasts,
-    GMT = NULL, ## no enrichment now
+    GMT = NULL,
     annot = annot, 
     ngenes = ngenes,
     power = power,
@@ -97,15 +96,13 @@ runPreservationWGCNA <- function(exprList,
   ## Zsummary tables
   mp.tables <- mp$preservation$Z[[1]][-reference]
   Z <- sapply(mp.tables, function(mat) mat[, "Zsummary.pres"])
-  rownames(Z) <- rownames(mp.tables[[1]])
-  rownames(Z) <- paste0("ME", rownames(Z))
+  rownames(Z) <- paste0("ME", rownames(mp.tables[[1]]))
   colnames(Z) <- names(multiExpr)[-reference]
 
   ## median rank
   mp.tables <- mp$preservation$observed[[1]][-reference]
   M <- sapply(mp.tables, function(mat) mat[, "medianRank.pres"])
-  rownames(M) <- rownames(mp.tables[[1]])
-  rownames(M) <- paste0("ME", rownames(M))
+  rownames(M) <- paste0("ME", rownames(mp.tables[[1]]))
   colnames(M) <- names(multiExpr)[-reference]
 
   ## module size
@@ -144,7 +141,7 @@ runPreservationWGCNA <- function(exprList,
   ## geneset enrichment of reference layer
   if (compute.enrichment && !is.null(GMT)) {
     message("[runPreservationWGCNA] computing geneset enrichment...")
-    if(!is.null(annot)) GMT <- rename_by2(GMT, annot, "human_ortholog")
+    if (!is.null(annot)) GMT <- rename_by2(GMT, annot, "human_ortholog")
     pres$gsea <- computeModuleEnrichment(
       pres$layers[[ref]],
       GMT = GMT,
