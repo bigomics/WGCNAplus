@@ -80,12 +80,8 @@ computeWGCNA_multiomics <- function(dataX,
     if (!is.null(annot)) X <- rename_by2(X, annot, "symbol")
     kk <- intersect(rownames(X), rownames(GMT))
     if (length(kk) == 0) {
-      message("Error: X and GMT do not share features")
-    }
-    if (length(kk)) {
-      if (!requireNamespace("plaid", quietly = TRUE)) {
-        stop("Package 'plaid' is required for gene set integration")
-      }
+      message("[computeWGCNA_multiomics] X and GMT do not share features")
+    } else {
       dataX$gs <- plaid::plaid(X[kk,], GMT[kk,])
     }
   }
