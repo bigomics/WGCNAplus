@@ -1,5 +1,4 @@
 #' Plot consensus module overlap heatmap
-#'
 #' @param net1 First network object.
 #' @param net2 Second network object.
 #' @param setLabels Labels for the two sets.
@@ -13,12 +12,12 @@ plotConsensusOverlapHeatmap <- function(net1, net2,
                                               lab.line = c(8, 8),
                                               plotDendro = FALSE,
                                               setpar = TRUE) {
-  if (is.null(setLabels)) {
-    setLabels <- c("Set1", "Set2")
-  }
+
+  if (is.null(setLabels)) setLabels <- c("Set1", "Set2")
   if (length(setLabels) == 1) setLabels <- paste0(setLabels, 1:2)
 
   if (plotDendro) {
+
     layout.matrix <- matrix(c(1, 2, 5, 3, 4, 5), nrow = 3, ncol = 2)
     layout(mat = layout.matrix, heights = c(0.8, 0.2, 2.5), widths = c(1, 1))
 
@@ -29,7 +28,6 @@ plotConsensusOverlapHeatmap <- function(net1, net2,
       hang = 0.03,
       addGuide = FALSE,
       guideHang = 0.05,
-      # marAll = marAll,
       setLayout = FALSE,
       main = setLabels[1]
     )
@@ -41,21 +39,16 @@ plotConsensusOverlapHeatmap <- function(net1, net2,
       hang = 0.03,
       addGuide = FALSE,
       guideHang = 0.05,
-      # marAll = marAll,
       setLayout = FALSE,
       main = setLabels[2]
     )
+
   }
 
 
   firstColors <- labels2colors(net1$colors)
   secondColors <- labels2colors(net2$colors)
   overlap <- overlapTable(firstColors, secondColors)
-  names(overlap)
-
-  T1 <- overlap$countTable
-  T2 <- table(firstColors, secondColors)
-  T3 <- table(net1$colors, net2$colors)
 
   firstModTotals <- rowSums(overlap$countTable)
   secondModTotals <- colSums(overlap$countTable)
@@ -74,22 +67,20 @@ plotConsensusOverlapHeatmap <- function(net1, net2,
   }
 
   # Use function labeledHeatmap to produce the color-coded table with all the trimmings
+  ss <- paste("Correspondence of", setLabels[1], "and ", setLabels[2], "modules")
   WGCNA::labeledHeatmap(
     Matrix = t(pTable),
     xLabels = paste(" ", firstModules),
     yLabels = paste(" ", secondModules),
     colorLabels = TRUE,
-    # xSymbols = paste0(setLabels[1],":", firstModules, " (", firstModTotals,")"),
-    # ySymbols = paste0(setLabels[2],":", secondModules, " (", secondModTotals, ")"),
     xSymbols = paste0(firstModules, " (", firstModTotals, ")"),
     ySymbols = paste0(secondModules, " (", secondModTotals, ")"),
     textMatrix = t(overlap$countTable),
     colors = WGCNA::blueWhiteRed(100)[50:100],
-    main = paste(
-      "Correspondence of", setLabels[1], "and ",
-      setLabels[2], "modules"
-    ),
-    cex.text = 1.0, cex.lab = 1.0, setStdMargins = FALSE
+    main = ss,
+    cex.text = 1.0,
+    cex.lab = 1.0,
+    setStdMargins = FALSE
   )
   mtext(toupper(setLabels[1]), side = 1, line = lab.line[1], cex = 1.1)
   mtext(toupper(setLabels[2]), side = 2, line = lab.line[2], cex = 1.1)
@@ -97,19 +88,18 @@ plotConsensusOverlapHeatmap <- function(net1, net2,
 
 
 #' Plot module preservation summary statistics
-#'
 #' @param pres Preservation results object.
 #' @param setpar If TRUE, set par layout.
 #' @return NULL (invisible). Generates a plot.
 #' @export
 plotPreservationSummaries <- function(pres, setpar = TRUE) {
+
   # Create a simple bar plot of Zsummary:
   Z <- pres$Zsummary
   ntest <- ncol(Z)
 
-  if (setpar) {
-    par(mfrow = c(3, ntest), mar = c(5, 5, 4, 1))
-  }
+  if (setpar) par(mfrow = c(3, ntest), mar = c(5, 5, 4, 1))
+
   xylist <- list(
     c("moduleSize", "Zsummary.pres"),
     c("moduleSize", "medianRank.pres"),
@@ -147,7 +137,6 @@ plotPreservationSummaries <- function(pres, setpar = TRUE) {
 }
 
 #' Plot preservation and module-trait heatmaps
-#'
 #' @param pres Preservation results object.
 #' @param subplots Subplots to show: "zsummary", "consmt", "wt.consmt".
 #' @param order.by Order modules by "name", "zsummary", or "clust".
@@ -156,24 +145,22 @@ plotPreservationSummaries <- function(pres, setpar = TRUE) {
 #' @return NULL (invisible). Generates a plot.
 #' @export
 plotPreservationModuleTraits <- function(pres,
-                                               subplots = c("zsummary", "consmt", "wt.consmt"),
-                                               order.by = "name",
-                                               setpar = TRUE, rm.na = FALSE) {
+                                         subplots = c("zsummary", "consmt", "wt.consmt"),
+                                         order.by = "name",
+                                         setpar = TRUE,
+                                         rm.na = FALSE) {
+
   if (all(is.numeric(subplots))) {
     subplots <- c("zsummary", "consmt", "wt.consmt")[subplots]
   }
 
-  if (setpar) {
-    par(mfrow = c(2, 2), mar = c(14, 12, 4, 2))
-  }
+  if (setpar) par(mfrow = c(2, 2), mar = c(14, 12, 4, 2))
 
   ## compute consensus
   Zsummary <- pres$Zsummary
-
   cR <- pres$modTraits
   ydim <- sapply(pres$layers, function(w) nrow(w$datTraits))
   consZ <- computeConsensusMatrix(cR, ydim, psig = 1, consfun = "gmean")
-  ## consZ <- consZ[rownames(cR[[1]]), colnames(cR[[1]])]
 
   ## match
   ii <- intersect(rownames(Zsummary), rownames(consZ))
@@ -181,7 +168,6 @@ plotPreservationModuleTraits <- function(pres,
   consZ <- consZ[ii, , drop = FALSE]
 
   ## order
-  order.method <- "clust"
   if (order.by == "name") {
     ii <- order(rownames(Zsummary))
     Zsummary <- Zsummary[ii, , drop = FALSE]
@@ -201,9 +187,7 @@ plotPreservationModuleTraits <- function(pres,
     consZ <- consZ[ii, jj, drop = FALSE]
   }
 
-  ## --------------------------------------
   ## Zsummary heatmap
-  ## --------------------------------------
   if ("zsummary" %in% subplots) {
     WGCNA::labeledHeatmap(
       Matrix = Zsummary,
@@ -217,9 +201,7 @@ plotPreservationModuleTraits <- function(pres,
     title("Module preservation (Zsummary)", line = 1.2, cex.main = 1.2)
   }
 
-  ## --------------------------------------
   ## Consensus Module-Trait
-  ## --------------------------------------
   validcol <- function(R) {
     which(colMeans(is.na(R)) < 1 &
       matrixStats::colSds(R, na.rm = TRUE) > 0.01)
@@ -244,9 +226,7 @@ plotPreservationModuleTraits <- function(pres,
     title("Consensus Module-Traits", line = 1.2, cex.main = 1.2)
   }
 
-  ## --------------------------------------
-  ## preservation-weighted Consensus Module-Trait
-  ## --------------------------------------
+  ## Preservation-weighted Consensus Module-Trait
   if ("wt.consmt" %in% subplots) {
     wz <- rowMeans(Zsummary**2, na.rm = TRUE)
     wz <- wz / max(wz)
@@ -270,4 +250,5 @@ plotPreservationModuleTraits <- function(pres,
     )
     title("Preservation-weighted Consensus\nModule-Traits", line = 1, cex.main = 1.2)
   }
+
 }
