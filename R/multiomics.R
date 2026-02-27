@@ -220,11 +220,6 @@ computeWGCNA_multiomics <- function(dataX,
     }
 
   }
-
-  lasagna.model <- NULL
-  lasagna.graph <- NULL
-
-  message("[computeWGCNA_multiomics] >>> creating lasagna ")
   
   ## Get eigengene matrices, remove grey modules
   ww <- lapply(layers, function(w) t(w$net$MEs))
@@ -234,7 +229,8 @@ computeWGCNA_multiomics <- function(dataX,
   datTraits <- layers[[1]]$datTraits
   gdata <- list(X = ww, samples = datTraits)
 
-  ## Create lasagna model
+  message("[computeWGCNA_multiomics] Creating LASAGNA model and graph ...")
+
   lasagna.model <- lasagna.create_model(
     gdata,
     pheno = "expanded",
@@ -246,7 +242,6 @@ computeWGCNA_multiomics <- function(dataX,
     add.revpheno = TRUE
   )
 
-  message("[computeWGCNA_multiomics] conditioning... ")
   ## Multi-condition edge weighting
   lasagna.graph <- lasagna.multisolve(
     lasagna.model,
@@ -260,19 +255,14 @@ computeWGCNA_multiomics <- function(dataX,
 
   report.out <- NULL
   if (report) {
-    message("[computeWGCNA_multiomics] >>> creating report")
-    ## Create summaries of each module.
-    if (!is.null(ai_model)) message("Creating report using ", ai_model)
-    if (is.null(ai_model)||ai_model=="") message("Creating dummy report")
-    report.out <- create_report(
-      layers, ai_model,
-      annot = annot,
-      multi = TRUE,
-      graph = lasagna.graph,
-      topratio = 0.85,
-      psig = 0.05,
-      verbose = 1
-    )
+    if (is.null(ai_model) || ai_model == "") {
+      message("[computeWGCNA_multiomics] No AI model specified. Creating 'dummy' report ...")
+    } else {
+      message("[computeWGCNA_multiomics] Creating AI report using: ", ai_model)
+    }
+    report.out <- create_report(layers, ai_model, annot = annot,
+      multi = TRUE, graph = lasagna.graph, topratio = 0.85,
+      psig = 0.05, verbose = 1)
   }
 
   ## get some settings
@@ -288,8 +278,7 @@ computeWGCNA_multiomics <- function(dataX,
     minKME = minKME,
     networktype = "signed",
     tomtype = "signed",
-    gset.methods = gset.methods,
-    NULL
+    gset.methods = gset.methods
   )
 
   out <- list(
@@ -341,7 +330,7 @@ mergeME <- function(mlist,
   is.mat <- all(sapply(mlist, inherits, what="matrix"))
   all.me <- unique(unlist(sapply(mlist, colnames, simplify=FALSE)))
 
-  M <- as.data.frame(matrix(NA, nrow=length(all.samples), ncol=length(all.me)))
+  M <- as.data.frame(matrix(NA, nrow = length(all.samples), ncol = length(all.me)))
   rownames(M) <- all.samples
   colnames(M) <- all.me
 
