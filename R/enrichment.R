@@ -48,7 +48,6 @@ computeModuleEnrichment <- function(wgcna,
   }
 
   gsea <- list()
-  dtype = names(layers)[1]
   for (dtype in names(layers)) {
 
     ## collapse features to symbol
@@ -199,13 +198,11 @@ run_enrichment_methods <- function(ME,
 
   gmt <- mat2gmt(GMT)
 
-  if (1) {
-    Pmin <- sapply(pval.list, function(P) apply(P, 1, min))
-    sel <- head(order(rowMeans(apply(Pmin, 2, rank))), 5 * ntop)
-    message("[run_enrichment_methods] preselecting ", length(sel), " sets for fgsea/Fisher test")
-    sel <- rownames(Pmin)[sel]
-    gmt <- gmt[sel]
-  }
+  Pmin <- sapply(pval.list, function(P) apply(P, 1, min))
+  sel <- head(order(rowMeans(apply(Pmin, 2, rank))), 5 * ntop)
+  message("[run_enrichment_methods] preselecting ", length(sel), " sets for fgsea/Fisher test")
+  sel <- rownames(Pmin)[sel]
+  gmt <- gmt[sel]
 
   ## Compute gene correlation to eigengenes ME,
   ## then do pre-ranked enrichment on rho value.
@@ -272,7 +269,6 @@ run_enrichment_methods <- function(ME,
 
   ## NEED RETHINK: how about negative FC???
   rnk.list <- lapply(rho.list, function(x) apply(x, 2, rank, na.last = "keep") / nrow(x))
-  meta.rnk <- Reduce("+", rnk.list) / length(rnk.list)
   rnk.NAZERO <- lapply(rnk.list, function(x) { x[is.na(x)]=0; x })
   rnk.NSUM <- Reduce("+", lapply(rnk.list, function(x) !is.na(x)))
   meta.rnk <- Reduce("+", rnk.NAZERO) / rnk.NSUM
@@ -298,7 +294,6 @@ run_enrichment_methods <- function(ME,
   }
 
   ## add genes
-  k <- names(gse.list)[1]
   for (k in names(gse.list)) {
     gset <- rownames(gse.list[[k]])
     gg <- me.genes[[k]]
