@@ -86,8 +86,7 @@ computeWGCNA_multiomics <- function(dataX,
       if (!requireNamespace("plaid", quietly = TRUE)) {
         stop("Package 'plaid' is required for gene set integration")
       }
-      gsetX <- plaid::plaid(X[kk,], GMT[kk,])
-      dataX$gs <- gsetX
+      dataX$gs <- plaid::plaid(X[kk,], GMT[kk,])
     }
   }
 
