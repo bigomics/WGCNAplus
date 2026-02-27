@@ -110,7 +110,7 @@ computeWGCNA_multiomics <- function(dataX,
 
   if (any(as.character(power) %in% c("sft","iqr"))) {
     ii <- which(as.character(power) %in% c("sft","iqr"))
-    message("[compute_multiomics] estimating power with method = ", power[ii])
+    message("[computeWGCNA_multiomics] estimating power with method = ", power[ii])
     for (i in ii) {
       p <- pickSoftThreshold(
         Matrix::t(dataX[[i]]), sft=NULL, rcut=0.85, powers = NULL,
@@ -119,7 +119,7 @@ computeWGCNA_multiomics <- function(dataX,
       power[i] <- p
     }
     power <- ifelse (is.na(power), 12, power)
-    message("[compute_multiomics] estimated powers = ", power)
+    message("[computeWGCNA_multiomics] estimated powers = ", power)
   }
   power <- as.numeric(power)
   names(power) <- names(dataX)
@@ -128,10 +128,10 @@ computeWGCNA_multiomics <- function(dataX,
   layers <- list()
   has.gxpx <- all(c("gx","px") %in% names(dataX))
   if (do.consensus && has.gxpx) {
-    cat("[compute_multiomics] computing WGCNA consensus layers for GX+PX \n")
+    message("[computeWGCNA_multiomics] computing WGCNA consensus layers for GX+PX \n")
     nn <- mean(rownames(dataX[["gx"]]) %in% rownames(dataX[["px"]]))
     if (nn < 0.10) {
-      message("[compute_multiomics] ERROR: gx and px features do not overlap")
+      message("[computeWGCNA_multiomics] ERROR: gx and px features do not overlap")
     } else {
       layers <- createConsensusLayers(
         dataX[c('gx','px')],
@@ -152,7 +152,7 @@ computeWGCNA_multiomics <- function(dataX,
 
   dtlist <- setdiff(names(dataX), names(layers))
   for (dt in dtlist) {
-    cat("[compute_multiomics] computing WGCNA for", dt, "-------------\n")
+    cat("[computeWGCNA_multiomics] computing WGCNA for", dt, "-------------\n")
     minkme1 <- ifelse(dt=='ph', 0, minKME[dt])
     minmodsize <- ifelse(dt=='ph', 1, minmodsize)
     layers[[dt]] <- computeWGCNA(
@@ -197,7 +197,7 @@ computeWGCNA_multiomics <- function(dataX,
   ## Compute enrichment
   gsea <- NULL
   if (compute.enrichment) {
-    message("[compute_multiomics] computing module enrichment...")
+    message("[computeWGCNA_multiomics] computing module enrichment...")
     gsea <- computeModuleEnrichment(
       wgcna = layers,
       multi = TRUE,
@@ -223,46 +223,44 @@ computeWGCNA_multiomics <- function(dataX,
 
   lasagna.model <- NULL
   lasagna.graph <- NULL
-  do.lasagna = TRUE
-  if (do.lasagna) {
-    dbg("[compute_multiomics] >>> creating lasagna ")
 
-    ## Get eigengene matrices, remove grey modules
-    ww <- lapply(layers, function(w) t(w$net$MEs))
-    ww <- lapply(ww, function(w) w[!grepl("[A-Z]{2}grey$", rownames(w)), , drop=FALSE])
-    ww <- ww[which(sapply(ww,nrow)>0)]
+  message("[computeWGCNA_multiomics] >>> creating lasagna ")
+  
+  ## Get eigengene matrices, remove grey modules
+  ww <- lapply(layers, function(w) t(w$net$MEs))
+  ww <- lapply(ww, function(w) w[!grepl("[A-Z]{2}grey$", rownames(w)), , drop=FALSE])
+  ww <- ww[which(sapply(ww,nrow)>0)]
 
-    datTraits <- layers[[1]]$datTraits
-    gdata <- list(X = ww, samples = datTraits)
+  datTraits <- layers[[1]]$datTraits
+  gdata <- list(X = ww, samples = datTraits)
 
-    ## Create lasagna model
-    lasagna.model <- lasagna.create_model(
-      gdata,
-      pheno = "expanded",
-      ntop = 2000,
-      nc = 20,
-      add.sink = FALSE,
-      intra = TRUE,
-      fully_connect = FALSE,
-      add.revpheno = TRUE
-    )
+  ## Create lasagna model
+  lasagna.model <- lasagna.create_model(
+    gdata,
+    pheno = "expanded",
+    ntop = 2000,
+    nc = 20,
+    add.sink = FALSE,
+    intra = TRUE,
+    fully_connect = FALSE,
+    add.revpheno = TRUE
+  )
 
-    dbg("[compute_multiomics] conditioning... ")
-    ## Multi-condition edge weighting
-    lasagna.graph <- lasagna.multisolve(
-      lasagna.model,
-      min_rho = 0.1,
-      max_edges = 1000,
-      fc.weight = TRUE,
-      sp.weight = FALSE,
-      prune = FALSE
-    )
+  message("[computeWGCNA_multiomics] conditioning... ")
+  ## Multi-condition edge weighting
+  lasagna.graph <- lasagna.multisolve(
+    lasagna.model,
+    min_rho = 0.1,
+    max_edges = 1000,
+    fc.weight = TRUE,
+    sp.weight = FALSE,
+    prune = FALSE
+  )
 
-  }
 
   report.out <- NULL
   if (report) {
-    dbg("[compute_multiomics] >>> creating report")
+    message("[computeWGCNA_multiomics] >>> creating report")
     ## Create summaries of each module.
     if (!is.null(ai_model)) message("Creating report using ", ai_model)
     if (is.null(ai_model)||ai_model=="") message("Creating dummy report")
@@ -281,8 +279,6 @@ computeWGCNA_multiomics <- function(dataX,
   power <- sapply(layers, function(a) a$net$power, USE.NAMES=FALSE)
   names(power) <- names(layers)
 
-  dbg("[compute_multiomics] copying settings...")
-
   ## Like consensus: put datatype wgcna in layers slot.
   settings <- list(
     minmodsize = minmodsize,
@@ -295,8 +291,6 @@ computeWGCNA_multiomics <- function(dataX,
     gset.methods = gset.methods,
     NULL
   )
-
-  dbg("[compute_multiomics] creating out list")
 
   out <- list(
     layers = layers,
@@ -312,6 +306,8 @@ computeWGCNA_multiomics <- function(dataX,
     class = "multiomics"
   )
 
+  message("[computeWGCNA_multiomics] Completed \n\n")
+  
   return(out)
 
 }
