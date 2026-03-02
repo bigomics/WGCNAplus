@@ -1517,6 +1517,9 @@ ai.ask <- function(question,
 
   if (model == "ellmer" && grepl("grok", model)) model <- "tidyprompt"
 
+  if (! engine %in% c("ellmer", "tidyprompt"))
+    stop("[WGCNAplus] Error. 'engine' must be 'ellmer' or 'tidyprompt'")
+  
   if (engine == "ellmer")
     resp <- ai.ask_ellmer(question = question, model = model, prompt = NULL) 
 
