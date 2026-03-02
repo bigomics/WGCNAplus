@@ -357,7 +357,7 @@ getConsensusGeneStats <- function(cons,
       labels = labels,
       trait = trait,
       plot = FALSE,
-      module = module,A
+      module = module,
       col = NULL,
       main = NULL
     )
