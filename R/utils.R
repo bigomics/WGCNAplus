@@ -1511,6 +1511,41 @@ mat2gmt <- function(mat) {
 }
 
 #' @export
+ai.get_ollama_models <- function(models = NULL,
+                                 size = NULL) {
+
+  available.models <- system("ollama list | tail -n +2 | cut -d' ' -f 1", intern=TRUE)
+
+  models.sizes <- system("ollama list | tail -n +2 | tr -s ' ' | cut -d' ' -f 3", intern=TRUE)
+  models.sizes <- as.numeric(models.sizes)
+  models.sizes <- ifelse(models.sizes < 100, models.sizes, models.sizes/1000)
+  names(models.sizes) <- available.models
+
+  if (!is.null(models) && !any(models == "OLLAMA_MODELS")) {
+    available.models <- intersect(models,available.models)
+  }
+
+  msize <- models.sizes[available.models] 
+  if (!is.null(size) && size == "S") {
+    available.models <- available.models[which(msize <= 3)]
+  }
+
+  if (!is.null(size) && size == "M") {
+    sel <- which( msize > 3 & msize <= 6)
+    available.models <- available.models[sel]
+  }
+
+  if (!is.null(size) && size == "L") {
+    msize <- models.sizes[available.models] 
+    available.models <- available.models[which(msize > 6)]
+  }
+  
+  return(available.models)
+
+}
+OLLAMA_MODELS <- ai.get_ollama_models()
+
+#' @export
 ai.ask <- function(question,
                    model,
                    engine = c("ellmer", "tidyprompt")[2]) {
@@ -1518,7 +1553,7 @@ ai.ask <- function(question,
   if (model == "ellmer" && grepl("grok", model)) model <- "tidyprompt"
 
   if (! engine %in% c("ellmer", "tidyprompt"))
-    stop("[WGCNAplus] Error. 'engine' must be 'ellmer' or 'tidyprompt'")
+    stop("[WGCNAplus::ai.ask] Error. 'engine' must be 'ellmer' or 'tidyprompt'")
   
   if (engine == "ellmer")
     resp <- ai.ask_ellmer(question = question, model = model, prompt = NULL) 
