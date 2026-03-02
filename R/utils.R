@@ -1552,8 +1552,8 @@ ai.ask_ellmer <- function(question,
         api_key = key, base_url = "https://api.x.ai/v1/")
     } else if (grepl("^groq:",model) && Sys.getenv("GROQ_API_KEY") != "") {
       model1 <- sub("groq:", "", model)
-      key <- key Sys.getenv("GROQ_API_KEY")
-      chat <- ellmer::chat_groq(model = model1, system_prompt = prompt,api_key = key)
+      key <- Sys.getenv("GROQ_API_KEY")
+      chat <- ellmer::chat_groq(model = model1, system_prompt = prompt, api_key = key)
     } else if (grepl("^gemini|^google:",model) && Sys.getenv("GEMINI_API_KEY") != "") {
       model1 <- sub("^google:","",model)
       key <- Sys.getenv("GEMINI_API_KEY")
