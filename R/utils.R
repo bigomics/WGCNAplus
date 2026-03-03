@@ -2,6 +2,7 @@
 #' @param n Number of colors to generate.
 #' @return Character vector of hex colors.
 #' @keywords internal
+#' @export
 purpleGreyYellow <- function(n) {
 
   colorRampPalette(c("purple", "grey65", "yellow"))(n)
@@ -17,6 +18,7 @@ purpleGreyYellow <- function(n) {
 #' @param f Color attenuation factor.
 #' @return Character matrix or vector of colors.
 #' @keywords internal
+#' @export
 rho2bluered <- function(R, a = 1, f = 0.95) {
 
   BLUERED <- WGCNA::blueWhiteRed(100)
@@ -169,6 +171,7 @@ filterColors <- function(X,
 #' @param power Soft-thresholding power.
 #' @return An hclust dendrogram object.
 #' @keywords internal
+#' @export
 tomclust <- function(X, power = 6) {
 
   A <- WGCNA::adjacency(t(X), power = power, type = "signed")
@@ -186,6 +189,7 @@ tomclust <- function(X, power = 6) {
 #' @param maxpower Maximum power to evaluate.
 #' @return List with quantiles, IQR, and optimal power.
 #' @keywords internal
+#' @export
 checkDendroHeights <- function(datExpr,
                                n = 200,
                                powers = NULL,
@@ -547,7 +551,6 @@ pickSoftThreshold <- function(datExpr,
 
 }
 
-
 #' Scale TOM matrices to equal quantiles
 #' Scale a list of TOM matrices so that the quantiles (default p=0.95)
 #' are equal after scaling with respect to the first TOM matrix.
@@ -555,6 +558,7 @@ pickSoftThreshold <- function(datExpr,
 #' @param scaleP Reference quantile for scaling.
 #' @return List of scaled TOM matrices.
 #' @keywords internal
+#' @export
 scaleTOMs <- function(TOMs, scaleP = 0.95) {
 
   nGenes <- nrow(TOMs[[1]])
@@ -598,6 +602,7 @@ scaleTOMs <- function(TOMs, scaleP = 0.95) {
 #' @param wgcna A WGCNA result object.
 #' @return Numeric module-trait correlation matrix.
 #' @keywords internal
+#' @export
 get_modTraits <- function(wgcna) {
 
   if(!is.null(wgcna$modTraits)) {
@@ -621,6 +626,7 @@ get_modTraits <- function(wgcna) {
 #' @param x Value to test.
 #' @return Logical TRUE if Date parseable.
 #' @keywords internal
+#' @export
 is.Date <- function(x) {
 
   if (!all(is.na(as.Date(
@@ -635,15 +641,13 @@ is.Date <- function(x) {
 }
 
 #' Collapse expanded trait matrix
-#'
 #' @param Y Expanded trait matrix with "=" columns.
 #' @return Collapsed matrix with category columns.
 #' @keywords internal
+#' @export
 collapseTraitMatrix <- function(Y) {
 
-  if (sum(grepl("=", colnames(Y))) < 2) {
-    return(Y)
-  }
+  if (sum(grepl("=", colnames(Y))) < 2) return(Y)
 
   is.cat <- grepl("=", colnames(Y))
   M <- Y[, which(!is.cat), drop = FALSE]
@@ -670,6 +674,7 @@ collapseTraitMatrix <- function(Y) {
 #' @param log Whether to log2-transform.
 #' @return Normalized expression matrix.
 #' @keywords internal
+#' @export
 logCPM <- function(counts,
                    total = 1e6,
                    prior = 1,
@@ -700,6 +705,7 @@ logCPM <- function(counts,
 #' @param lab.matrix Label matrix with "_vs_" column names.
 #' @return Numeric contrast matrix.
 #' @keywords internal
+#' @export
 makeContrastsFromLabelMatrix <- function(lab.matrix) {
 
   if (!all(grepl("_vs_", colnames(lab.matrix)))) {
@@ -739,6 +745,7 @@ makeContrastsFromLabelMatrix <- function(lab.matrix) {
 #' @param m2 Second sparse matrix.
 #' @return Combined sparse matrix.
 #' @keywords internal
+#' @export
 cbind_sparse_matrix <- function(m1, m2) {
 
   gene_vector <- unique(c(rownames(m1), rownames(m2)))
@@ -774,6 +781,7 @@ cbind_sparse_matrix <- function(m1, m2) {
 #' @param verbose Verbosity level.
 #' @return Combined sparse matrix.
 #' @keywords internal
+#' @export
 merge_sparse_matrix <- function(m1,
                                 m2,
                                 margin = NULL,
@@ -791,6 +799,7 @@ merge_sparse_matrix <- function(m1,
 #' @param xx Character vector, matrix, or list.
 #' @return Input with prefixes removed.
 #' @keywords internal
+#' @export
 mofa.strip_prefix <- function(xx) {
 
   if (class(xx) == "character") {
@@ -823,6 +832,7 @@ mofa.strip_prefix <- function(xx) {
 #' @param xx Named list of matrices or vectors.
 #' @return Input with layer-name prefixes added.
 #' @keywords internal
+#' @export
 mofa.prefix <- function(xx) {
 
   xx <- mofa.strip_prefix(xx)
@@ -844,6 +854,7 @@ mofa.prefix <- function(xx) {
 #' @param xx Named list of data matrices.
 #' @return Combined matrix with prefixed rownames.
 #' @keywords internal
+#' @export
 mofa.merge_data <- function(xx) { do.call(rbind, mofa.prefix(xx)) }
 
 #' Split MOFA data by prefix
@@ -851,6 +862,7 @@ mofa.merge_data <- function(xx) { do.call(rbind, mofa.prefix(xx)) }
 #' @param keep.prefix Whether to keep prefix in names.
 #' @return Named list of matrices per layer.
 #' @keywords internal
+#' @export
 mofa.split_data <- function(X, keep.prefix = FALSE) {
 
   if (!all(grepl("[:]|SOURCE|SINK", rownames(X)))) {
@@ -870,6 +882,7 @@ mofa.split_data <- function(X, keep.prefix = FALSE) {
 #' @param ntop Number of top features to keep.
 #' @return Filtered data with top-variance features.
 #' @keywords internal
+#' @export
 mofa.topSD <- function(xdata, ntop) {
 
   if (is.list(xdata)) {
@@ -904,6 +917,7 @@ mofa.topSD <- function(xdata, ntop) {
 #' @param reorder Whether to preserve group order.
 #' @return Matrix of group-level row means.
 #' @keywords internal
+#' @export
 rowmean <- function(X, group = rownames(X), reorder = TRUE) {
 
   if (nrow(X) == 1) return(X)
@@ -947,6 +961,7 @@ rowmean <- function(X, group = rownames(X), reorder = TRUE) {
 #' @param x Character vector, matrix, or data.frame.
 #' @return Character vector of extracted prefixes.
 #' @keywords internal
+#' @export
 mofa.get_prefix <- function(x) {
 
   if (class(x) %in% c("matrix", "data.frame") || !is.null(dim(x))) {
@@ -963,7 +978,10 @@ mofa.get_prefix <- function(x) {
 #' @param merge.cols Column merge strategy: "prefix", "union", or "intersect".
 #' @return Merged numeric matrix.
 #' @keywords internal
-mofa.merge_data2 <- function(xdata, merge.rows="prefix", merge.cols="union") {
+#' @export
+mofa.merge_data2 <- function(xdata,
+                             merge.rows = "prefix",
+                             merge.cols = "union") {
 
   n1 <- length(Reduce(intersect,lapply(xdata,rownames)))
   n2 <- length(Reduce(intersect,lapply(xdata,colnames)))  
@@ -983,7 +1001,7 @@ mofa.merge_data2 <- function(xdata, merge.rows="prefix", merge.cols="union") {
 
   if (prefix.cols) {
     ## prefix the column names. i.e. different datasets.
-    for(i in 1:length(xdata)) {
+    for (i in 1:length(xdata)) {
       nn <- sub("^[A-Za-z]+:","",colnames(xdata[[i]]))
       colnames(xdata[[i]]) <- paste0(names(xdata)[i],":",nn)
     }
@@ -1029,6 +1047,7 @@ mofa.merge_data2 <- function(xdata, merge.rows="prefix", merge.cols="union") {
   D[which(nn == 0)] <- NA
   rownames(D) <- allfeatures
   colnames(D) <- allsamples
+
   return(D)
 
 }
@@ -1042,6 +1061,7 @@ mofa.merge_data2 <- function(xdata, merge.rows="prefix", merge.cols="union") {
 #' @param add_datatype Prepend data type prefix.
 #' @return Character vector of mapped symbols.
 #' @keywords internal
+#' @export
 probe2symbol <- function(probes,
                          annot_table,
                          query = "symbol",
@@ -1109,6 +1129,7 @@ probe2symbol <- function(probes,
 #' @param keep.prefix Preserve MOFA-style prefix.
 #' @return Input with renamed rows.
 #' @keywords internal
+#' @export
 rename_by2 <- function(counts,
                        annot_table,
                        new_id = "symbol",
@@ -1186,6 +1207,7 @@ rename_by2 <- function(counts,
 #' @param Y Data.frame or matrix to tidy.
 #' @return Data.frame with inferred column types.
 #' @keywords internal
+#' @export
 tidy.dataframe <- function(Y) {
 
   Y <- Y[, which(colMeans(is.na(Y)) < 1), drop = FALSE]
@@ -1221,6 +1243,7 @@ tidy.dataframe <- function(Y) {
 #' @param check Perform type checking.
 #' @return Expanded binary design matrix.
 #' @keywords internal
+#' @export
 expandPhenoMatrix <- function(M,
                               drop.ref = TRUE,
                               keep.numeric = FALSE,
@@ -1319,6 +1342,7 @@ expandPhenoMatrix <- function(M,
 #' @param log.transform Whether to log-CPM transform.
 #' @return List with counts, meta, and membership.
 #' @keywords internal
+#' @export
 pgx.supercell <- function(counts,
                           meta,
                           group = NULL,
@@ -1610,6 +1634,7 @@ ai.ask_ellmer <- function(question,
 
 }
 
+#' @export
 ai.ask_tidyprompt <- function(question,
                               model,
                               verbose = 0) {
