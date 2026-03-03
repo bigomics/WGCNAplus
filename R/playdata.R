@@ -1,6 +1,7 @@
 #' Get merged multiomics geneset x feature matrix.
 #' Combines geneset and metabolite sets.
 #' @keywords internal
+#' @export
 getPlaydataGMT <- function() {
 
   if (!requireNamespace("playdata", quietly = TRUE)) {
