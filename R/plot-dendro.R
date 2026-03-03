@@ -227,39 +227,32 @@ plotDendroAndColors <- function(wgcna,
 #' @param cex Character expansion factor.
 #' @return NULL (invisible). Generates a plot.
 #' @export
-plotMultiDendroAndColors.BAK <- function(wgcna,
-                                         block = 1,
-                                         extra.colors = NULL,
-                                         show.kme = FALSE,
-                                         show.traits = FALSE,
-                                         show.contrasts = FALSE,
-                                         show.mat = NULL,
-                                         clust = TRUE,
-                                         use.tree = 0,
-                                         rm.na = TRUE,
-                                         sd.wt = 0,
-                                         nmax = -1,
-                                         main = 'Dendro and colors',
-                                         colorHeight = 0.5,
-                                         marAll = c(0.4,5,1,0.2),
-                                         cex = 1
-                                         )
-{
+plotMultiDendroAndColors <- function(wgcna,
+                                     block = 1,
+                                     extra.colors = NULL,
+                                     show.kme = FALSE,
+                                     show.traits = FALSE,
+                                     show.contrasts = FALSE,
+                                     show.mat = NULL,
+                                     clust = TRUE,
+                                     use.tree = 0,
+                                     rm.na = TRUE,
+                                     sd.wt = 0,
+                                     nmax = -1,
+                                     main = 'Dendro and colors',
+                                     colorHeight = 0.5,
+                                     marAll = c(0.4,5,1,0.2),
+                                     cex = 1) {
 
   layers <- wgcna
-  if (!is.null(wgcna$layers)) {
-    layers <- wgcna$layers
-  } else {
-    layers <- list( ' '=wgcna )
-  }
+  layers <- list(' '=wgcna )
+  if (!is.null(wgcna$layers)) layers <- wgcna$layers
   
   nw <- length(layers)
   nc <- ceiling(sqrt(nw))
   nr <- ceiling(nw / nc)
   hh <- rep(c((1 - colorHeight), colorHeight), nr)
-  nf <- layout(matrix(1:(2*nr*nc), nrow=2*nr, ncol=nc,
-    byrow=FALSE), heights = hh )
-
+  nf <- layout(matrix(1:(2*nr*nc), nrow=2*nr, ncol=nc, byrow=FALSE), heights = hh)
   tt <- paste0(main, " ",toupper(names(layers)))
 
   par(cex = cex)
@@ -279,4 +272,5 @@ plotMultiDendroAndColors.BAK <- function(wgcna,
       main = tt[k]
     )
   }
+
 }
