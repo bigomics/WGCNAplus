@@ -175,7 +175,7 @@ filterColors <- function(X,
 tomclust <- function(X, power = 6) {
 
   A <- WGCNA::adjacency(t(X), power = power, type = "signed")
-  TOM <- fastTOMsimilarity(A, tomtype = "signed", lowrank = 40)
+  TOM <- fastTOMsimilarity(A, lowrank = 40)
   hc <- hclust(as.dist(1 - TOM), method = "average")
   return(hc)
 
@@ -214,7 +214,7 @@ checkDendroHeights <- function(datExpr,
 
   for (i in 1:length(powers)) {
     A <- WGCNA::adjacency(tX, power = powers[i], type = "signed")
-    TOM <- fastTOMsimilarity(A, tomtype = "signed", lowrank = 40)
+    TOM <- fastTOMsimilarity(A, lowrank = 40)
     hc <- hclust(as.dist(1 - TOM), method = "average")
     ht[[i]] <- hc$height
   }
