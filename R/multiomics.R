@@ -231,9 +231,9 @@ computeWGCNA_multiomics <- function(dataX,
 
   message("[computeWGCNA_multiomics] Creating LASAGNA model and graph ...")
 
-  lasagna.model <- lasagna.create_model(
+  lasagna.model <- lasagna::create_model(
     gdata,
-    pheno = "expanded",
+    meta.type = "expanded",
     ntop = 2000,
     nc = 20,
     add.sink = FALSE,
@@ -243,7 +243,7 @@ computeWGCNA_multiomics <- function(dataX,
   )
 
   ## Multi-condition edge weighting
-  lasagna.graph <- lasagna.multisolve(
+  lasagna.graph <- lasagna::multisolve(
     lasagna.model,
     min_rho = 0.1,
     max_edges = 1000,
