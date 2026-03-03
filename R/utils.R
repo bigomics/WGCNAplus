@@ -1677,8 +1677,8 @@ ai.ask_tidyprompt <- function(question,
 
 }
 
-#' Generate image with Gemini (aka Nano Banana). Note this model
-#' handles very large prompts correctly.
+#' Generate image with Gemini (aka Nano Banana).
+#' Note this model handles very large prompts correctly.
 #' @export
 ai.create_image_gemini <- function(prompt,
                                    model = "gemini-2.5-flash-image",
@@ -1767,10 +1767,121 @@ ai.create_image_gemini <- function(prompt,
     return(invisible(raw_image))
   }
 
-  if (format == "base64") {
-    return(invisible(b64))
-  }
+  if (format == "base64") return(invisible(b64))
 
   stop("return error")
+
+}
+
+#' Generate image with OpenAI's dallE.
+#' Note: limitation of the prompt is about 1000 characters. 
+#' @export
+ai.create_image_openai <- function (prompt,
+                                    model = NULL, 
+                                    size = c("512x512","1024x1024","256x256")[1], 
+                                    format = c("file","base64","raw"),
+                                    filename = "image.png",
+                                    api_key = Sys.getenv("OPENAI_API_KEY"),
+                                    base_url = "https://api.openai.com/v1",
+                                    user = NULL,
+                                    organization = NULL)  {
+  
+  format <- match.arg(format)
+  assertthat::assert_that(assertthat::is.string(prompt), assertthat::noNA(prompt))
+  assertthat::assert_that(assertthat::is.string(size), assertthat::noNA(size))
+  assertthat::assert_that(assertthat::is.string(format), assertthat::noNA(format))
+
+  if (!is.null(user)) {
+    assertthat::assert_that(assertthat::is.string(user), assertthat::noNA(user))
+  }
+
+  assertthat::assert_that(assertthat::is.string(api_key), assertthat::noNA(api_key))
+
+  if (!is.null(organization)) {
+    assertthat::assert_that(assertthat::is.string(organization), assertthat::noNA(organization))
+  }
+
+  model <- sub("^openai:", "", model)
+  
+  if (grepl("api.x.ai", base_url, fixed = TRUE)) {
+    message("calling grok ($0.07 per image)")    
+    if (is.null(model)) model <- "grok-2-image-1212"
+    size <- NULL
+  } else if (grepl("api.openai.com", base_url, fixed = TRUE)) {
+    message("calling openai ($0.05 per image)")    
+  } else {
+    stop("invalid base_url =", base_url)
+  }
+  
+  url <- glue::glue("{base_url}/images/generations")
+  headers <- c(Authorization = paste("Bearer", api_key), `Content-Type` = "application/json")
+
+  body <- list()
+  body[["model"]] <- model
+  body[["prompt"]] <- prompt
+  body[["n"]] <- 1
+  body[["response_format"]] <- "b64_json"
+  body[["size"]] <- size
+  body[["user"]] <- user
+  response <- httr::POST(url = url, httr::add_headers(.headers = headers), body = body, encode = "json")
+
+  httr::http_type(response)
+  if (httr::http_type(response) != "application/json") {
+    paste("OpenAI API probably has been changed. Please check online documentation.") %>% stop()
+  }
+
+  parsed <- response %>% httr::content(as = "text", encoding = "UTF-8") %>% jsonlite::fromJSON(flatten = TRUE)
+  if (httr::http_error(response)) {
+    error_msg <- parsed$error
+    if(is.list(error_msg)) error_msg <- parsed$error$message
+    paste0("OpenAI API request failed [", httr::status_code(response), 
+      "]:\n\n", error_msg) %>% stop(call. = FALSE)
+  }
+
+  b64 <- parsed$data[['b64_json']]
+  if (is.null(b64) || length(b64) == 0) stop("No image data found in parsed response")
+
+  if (format == "file") {
+    raw_image <- base64enc::base64decode(b64)    
+    writeBin(raw_image, filename)
+    message("Saved image to: ", filename)
+    return(invisible(filename))
+  }
+
+  if (format == "raw") {
+    raw_image <- base64enc::base64decode(b64)    
+    return(invisible(raw_image))
+  }
+
+  if (format == "base64") return(invisible(b64))
+
+  stop("return error")
+  
+}
+
+#' Generate image with Grok (which uses Flux).
+#' Note: limitation of the prompt is about 1000 characters.
+#' @export
+ai.create_image_grok <- function(prompt,
+                                 model = "grok-2-image-1212", 
+                                 format = c("file","base64","raw")[1], 
+                                 api_key = Sys.getenv("XAI_API_KEY"),
+                                 base_url = "https://api.x.ai/v1",
+                                 filename = "image.png",
+                                 user = NULL,
+                                 organization = NULL) {
+
+  model <- sub("^grok:", "", model)
+  ai.create_image_openai(
+    prompt, 
+    size = "default",
+    format = format,
+    filename = filename,
+    model = model,
+    base_url = base_url,
+    api_key = api_key,
+    user = user,
+    organization = organization
+  ) 
 
 }
