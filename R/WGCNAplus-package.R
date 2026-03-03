@@ -13,7 +13,6 @@
 #' @importFrom playbase gx.limma gx.heatmap gset.fisher ai.ask
 #'   pgx.scatterPlotXY imputeMissing svdImpute2
 #'   normalizeMultiOmics pgx.clusterBigMatrix
-#'   lasagna.create_model lasagna.multisolve
 #'
 #' @importFrom Matrix t crossprod
 #' @importFrom matrixStats rowSds colSds rowMaxs colMaxs
