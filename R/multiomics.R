@@ -73,7 +73,6 @@ computeWGCNA_multiomics <- function(dataX,
     GMT <- rename_by2(GMT, annot, "symbol")
   }
 
-
   ## add pheno matrix??
   if (add.gsets && !is.null(GMT)) {
     X <- mofa.merge_data2(dataX, merge.rows="union")
@@ -251,7 +250,6 @@ computeWGCNA_multiomics <- function(dataX,
     sp.weight = FALSE,
     prune = FALSE
   )
-
 
   report.out <- NULL
   if (report) {
