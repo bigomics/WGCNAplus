@@ -10,7 +10,7 @@
 #'
 #' @import WGCNA
 #'
-#' @importFrom playbase gx.limma gx.heatmap gset.fisher ai.ask
+#' @importFrom playbase gx.limma gx.heatmap
 #'   pgx.scatterPlotXY imputeMissing svdImpute2
 #'   normalizeMultiOmics pgx.clusterBigMatrix
 #'
