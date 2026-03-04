@@ -87,8 +87,7 @@ computeWGCNA_multiomics <- function(dataX,
 
   ## add phenomatrix??
   if (add.pheno) {
-    phenoX <- expandPhenoMatrix(samples, keep.numeric = TRUE, drop.ref = drop.ref)
-    dataX$ph <- t(phenoX)
+    dataX$ph <- t(expandPhenoMatrix(samples, keep.numeric = TRUE, drop.ref = drop.ref))
   }
 
   dt.na <- which(unlist(lapply(dataX, function(x) sum(is.na(x)))) > 0)
@@ -111,9 +110,8 @@ computeWGCNA_multiomics <- function(dataX,
     ii <- which(as.character(power) %in% c("sft","iqr"))
     message("[computeWGCNA_multiomics] estimating power with method = ", power[ii])
     for (i in ii) {
-      p <- pickSoftThreshold(
-        Matrix::t(dataX[[i]]), sft=NULL, rcut=0.85, powers = NULL,
-        method=power[i], nmax=1000, verbose=1)
+      p <- pickSoftThreshold(Matrix::t(dataX[[i]]), sft=NULL,
+        rcut=0.85, powers = NULL, method=power[i], nmax=1000, verbose=1)
       if (length(p)==0 || is.null(p) ) p <- NA
       power[i] <- p
     }
