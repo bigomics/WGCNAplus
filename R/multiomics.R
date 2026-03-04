@@ -66,13 +66,13 @@ computeWGCNA_multiomics <- function(dataX,
 
   if (!is.null(annot)) {
     dataX <- lapply(dataX, function(x) rename_by2(x, annot, "symbol"))
+    if (!is.null(GMT)) {
+      GMT <- rename_by2(GMT, annot, "symbol")
+    }
   }
 
   compute.enrichment <- (compute.enrichment && !is.null(GMT))
-  if (!is.null(annot) && !is.null(GMT)) {
-    GMT <- rename_by2(GMT, annot, "symbol")
-  }
-
+  
   ## add pheno matrix??
   if (add.gsets && !is.null(GMT)) {
     X <- mofa.merge_data2(dataX, merge.rows="union")
