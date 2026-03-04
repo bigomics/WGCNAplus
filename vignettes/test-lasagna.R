@@ -1,119 +1,125 @@
+##-----------
+## LASAGNA
+##-----------
 library(devtools)
 library(igraph)
-
-load_all("../../lasagna")
 load_all()
+setwd("vignettes/")
 
-## Imports
-## gset.rankcor <- playbase::gset.rankcor
-## mat2gmt <- playbase::mat2gmt
-## mofa.merge_data2 <- playbase::mofa.merge_data2
-## ai.ask <- playbase::ai.ask
-## ai.create_image_gemini <- playbase::ai.create_image_gemini
-lasagna.multisolve <- playbase::lasagna.multisolve
+X <- read.csv("./data/multiomicsBRCA/expression.csv", row.names = 1)
+samples <- read.csv("./data/multiomicsBRCA/samples.csv", row.names = 1)
+contrasts <- read.csv("./data/multiomicsBRCA/contrasts.csv", row.names = 1)
+GMT <- readRDS("./data/multiomicsBRCA/gmt.RDS")
+annot <- read.csv("./data/multiomicsBRCA/annot.csv", row.names = 1)
 
-##--------------------------------------------------------------------
-## Compute multi-omics
-##--------------------------------------------------------------------
-
-pgx <- playbase::pgx.load("~/Playground/omicsplayground/data/mox-brca.pgx")
-pgx <- playbase::pgx.load("~/Playground/omicsplayground/data/mox-geiger.pgx")
-
-write.csv(pgx$X, file="brca/expression.csv")
-write.csv(pgx$samples, file="brca/samples.csv")
-write.csv(pgx$contrasts, file="brca/contrasts.csv")
-save(pgx$GMT, file="brca/gmt.rda")
-pgx <- playbase::pgx.initialize(pgx)
-
-annot <- pgx$genes
-pgx$X <- rename_by2(pgx$X, annot, "symbol", keep.prefix=TRUE)
-dataX <- mofa.split_data(pgx$X)
-names(dataX)
+annot$symbol <- make.unique(annot$symbol)
+X <- WGCNAplus::rename_by2(X, annot, "symbol", keep.prefix = TRUE)
+dataX <- WGCNAplus::mofa.split_data(X)
 dataX <- dataX[c("mir","gx","px")]
-lapply(dataX,dim)
 
-annot <- pgx$genes
-GMT0 <- rename_by2(getPlaydataGMT(), annot, "symbol")
-GMT1 <- rename_by2(pgx$GMT, annot, "symbol")
-GMT <-  merge_sparse_matrix(GMT0, GMT1)
+names(dataX)
+lapply(dataX, dim)
+
+GMT0 <- WGCNAplus::rename_by2(WGCNAplus::getPlaydataGMT(), annot, "symbol")
+GMT1 <- WGCNAplus::rename_by2(GMT, annot, "symbol")
+GMT <-  WGCNAplus::merge_sparse_matrix(GMT0, GMT1)
 dim(GMT)
 head(rownames(GMT))
 tail(rownames(GMT))
 
 ## full WGCNA on features
-wgcna <- computeWGCNA_multiomics(
-  dataX, pgx$samples, GMT=GMT, 
-  power="iqr", minmodsize=3, minKME=0.3,
-  mergeCutHeight=0.3  ## seems better than 0.15
+wgcna <- WGCNAplus::computeWGCNA_multiomics(
+  dataX = dataX,
+  samples = samples,
+  GMT = GMT, 
+  power = "iqr",
+  minmodsize = 3,
+  minKME = 0.3,
+  mergeCutHeight = 0.3  ## seems better than 0.15
 )
-wgcna$me.genes
-
-pdf("geiger/wgcna-dendro.pdf", w=14, h=7)
-par(mfrow=c(1,1),cex=1.4)
-plotMultiDendroAndColors(
-  wgcna, marAll=c(2,7,3,1),  
-  show.traits=1, show.contrasts=1,
-  show.kme=0, use.tree=0,
-  colorHeight = 0.5
-)
-dev.off()
-
-pdf("geiger/wgcna-moduletrait.pdf", w=14, h=7)
-par(mfrow=c(1,1),mar=c(8,11,4,2), cex=1.2)
-plotModuleTraitHeatmap(wgcna, cluster=TRUE,
-  main="Module-Trait Heatmap", setpar=FALSE,
-  transpose=TRUE, text=FALSE, multi=TRUE)
-dev.off()
 
 names(wgcna)
+wgcna$me.genes
 
-##--------------------------------------------------------------------
-## LASAGNA (full)
-##--------------------------------------------------------------------
-
-data <- list(
-  X = dataX,
-  samples = pgx$samples
+par(mfrow = c(1, 1), cex = 1.4)
+WGCNAplus::plotMultiDendroAndColors(
+  wgcna,
+  marAll = c(2,7,3,1),  
+  show.traits = 1,
+  show.contrasts = 1,
+  show.kme = 0,
+  use.tree = 0,
+  colorHeight = 0.5
 )
 
+par(mfrow = c(1, 1), mar = c(8, 11, 4, 2), cex = 1.2)
+WGCNAplus::plotModuleTraitHeatmap(
+  wgcna,
+  cluster = TRUE,
+  main = "Module-Trait Heatmap",
+  setpar = FALSE,
+  transpose = TRUE,
+  text = FALSE,
+  multi = TRUE
+)
+
+
+##--------------------
+## LASAGNA (full)
+##--------------------
+data <- list(X = dataX, samples = samples)
+lapply(data[[1]], names)
+lapply(data[[1]], dim)
+lapply(data[[1]], class)
+
 obj <- NULL
-obj <- lasagna::create_model(data, pheno="pheno", ntop=1000, nc=10,
-  add.sink=TRUE, intra=FALSE, fully_connect=FALSE, add.revpheno=TRUE,
-  condition.edges=1)
+obj <- lasagna::create_model(
+  data = data,
+  meta.type = "pheno",
+  ntop = 1000,
+  nc = 10,
+  add.sink = TRUE,
+  intra = FALSE,
+  fully_connect = FALSE,
+  add.revpheno = TRUE,
+  condition.edges = 1
+)
 names(obj)
+
 
 ## color by WGCNA clustering
 wgcna$me.genes
 table(wgcna$me.colors)
 head(wgcna$me.colors)
 V(obj$graph)$color <- wgcna$me.colors[V(obj$graph)$name]
-##V(obj$graph)$color <- substring(wgcna$me.colors[V(obj$graph)$name],3,99)
 V(obj$graph)$color[is.na(V(obj$graph)$color)] <- "red"
 table(V(obj$graph)$color)
 
 ## solve the graph for a certain phenotype
 colnames(obj$Y)
 pheno = colnames(obj$Y)[1]
+pheno = colnames(obj$Y)[2]
 pheno = colnames(obj$Y)[3]
 pheno = colnames(obj$Y)[13]
-graph <- lasagna::solve(obj, pheno, min_rho=0.01, max_edges=1000,
-  value="rho", sp.weight=1, prune=FALSE) 
+graph <- lasagna::solve(
+  obj,
+  pheno,
+  min_rho = 0.01,
+  max_edges = 1000,
+  value = "rho",
+  sp.weight = 1,
+  prune = FALSE
+) 
 graph
 
-##tt <- V(graph)$name
-
-
 ## prune graph for cleaner plotting
-pdf("geiger/lasagna-full.pdf", w=14, h=8)
-par(mfrow=c(1,1), mar=c(1,1,1,1)*0, cex=0.9)
-mp <- plot_multipartite(
+par(mfrow = c(1, 1), mar = c(1, 1, 1, 1)*0, cex = 0.9)
+mp <- lasagna::plot_multipartite(
   graph,
-  min.rho = 0.9,
-  ntop = 40,
+  min.rho = 0.8,
+  ntop = 50,
   xdist = 2,
-##  label = tt,
   color.var = "color",
-##  labpos = c(2,2,4,4),
   cex.label = 0.85,
   vx.cex = 1.8,
   edge.cex = 1,
@@ -126,35 +132,21 @@ mp <- plot_multipartite(
   strip.prefix = TRUE,
   prune = 0
 ) 
-dev.off()
 
-##--------------------------------------------------------------------
+
+##--------------------
 ## LASAGNA (modules)
-##--------------------------------------------------------------------
-  
-library(igraph)
-lasagna.create_model <- playbase::lasagna.create_model
-lasagna.solve <- playbase::lasagna.solve
-lasagna.multisolve <- playbase::lasagna.multisolve  
-plotMultiPartiteGraph2 <- playbase::plotMultiPartiteGraph2
-
-names(wgcna)
-(wgcna$me.genes)
-
+##--------------------
 ww <- wgcna$layers
 names(ww)
-##ww <- ww[c("mir","gx","px")]
 xx <- lapply(ww, function(m) t(m$net$MEs))
 lapply(xx,dim)
 
-data <- list(
-  X = xx,
-  samples = ww[[1]]$datTraits
-)
+data <- list(X = xx, samples = ww[[1]]$datTraits)
 
 lasagna <- lasagna::create_model(
   data,
-  pheno = "expanded",
+  meta.type = "expanded",
   ntop = 2000,
   nc = 40,
   add.sink = FALSE,
@@ -185,9 +177,8 @@ V(solved)$color <- 'red'
 ii <- grep("PHENO|SINK|SOURCE",V(solved)$name,invert=TRUE)
 V(solved)$color[ii] <- sub(".*:","",V(solved)$name)[ii]
 
-pdf("geiger/lasagna-wgcnaNC.pdf",w=12,h=6)
-par(mfrow=c(1,1), mar = c(0,0,0,0), cex=1)
-plot_multipartite(
+par(mfrow = c(1, 1), mar = c(0, 0, 0, 0), cex = 1)
+lasagna::plot_multipartite(
   solved,
   min.rho = 0.2,
   ntop = -1,
@@ -205,40 +196,38 @@ plot_multipartite(
   strip.prefix2 = TRUE,
   prune = FALSE
 )
-title("WGCNA-Lasagna Colored by Module", line=-2, cex.main=1.6)
-dev.off()
 
 
-##--------------------------------------------------------------------
+##--------------
 ## Biomarkers
-##--------------------------------------------------------------------
-load_all()
-
-QQ <- calculateCompoundSignificance(wgcna) 
+##--------------
+QQ <- WGCNAplus::calculateCompoundSignificance(wgcna) 
 names(QQ)
 k=2
 Q <- QQ[[k]]
 
-pdf("geiger/biomarker-significance.pdf",w=12,h=8)
-par(mfrow=c(2,1), mar=c(8,6,3,0), cex=0.9)
-ntop=60
+par(mfrow = c(2, 1), mar = c(8, 6, 3, 0), cex = 0.9)
 Q <- Q[order(-Q$score1),]
-Q1 <- head(Q,ntop)
+Q1 <- head(Q, 60)
 dt <- names(QQ)[k]
-barplot( Q1$score1, col=Q1$color,
-  ylab = "significance (MM*TS)", main=paste("biomarker significance",dt),
-  cex.names=1, names.arg = rownames(Q1), las=3 )
-Q <- Q[order(-Q$score2),]
-Q1 <- head(Q,ntop)
-barplot( Q1$score2, col=Q1$color,
-  ylab = "significance (MM*FC)", main=paste("biomarker significance",dt),
-  cex.names=1, names.arg = rownames(Q1), las=3 )
-dev.off()
+barplot(Q1$score1, col = Q1$color,
+  ylab = "significance (MM*TS)",
+  main = paste("Biomarker significance", dt),
+  cex.names = 1, names.arg = rownames(Q1), las = 3)
 
-##--------------------------------------------------------------------
+Q <- Q[order(-Q$score2), ]
+Q1 <- head(Q, 60)
+barplot(Q1$score2, col = Q1$color,
+  ylab = "significance (MM*FC)",
+  main = paste("Biomarker significance", dt),
+  cex.names = 1, names.arg = rownames(Q1), las = 3)
+
+
+
+##--------CODE BELOW NOT TESTED--------##
+##--------
 ## TEST
-##--------------------------------------------------------------------
-  
+##--------
 group=cc
 matrix_group_stats <- function(X, group, FUN="mean", probs=0.5) {
   nm <- length(unique(group))
@@ -248,10 +237,12 @@ matrix_group_stats <- function(X, group, FUN="mean", probs=0.5) {
     for(j in unique(group)) {
       ii <- which(group == i)
       jj <- which(group == j)
-      if(FUN == "mean") {
+
+      if (FUN == "mean") {
         M[i,j] = M[j,i] = mean( X[ii,jj], na.rm=TRUE )
       }
-      if(FUN == "quantile") {
+
+      if (FUN == "quantile") {
         probs2 <- c(1-probs,probs)
         pp <- quantile(X[ii,jj], probs=probs2)
         pp <- ifelse(-pp[1] > pp[2], pp[1], pp[2])
@@ -263,7 +254,6 @@ matrix_group_stats <- function(X, group, FUN="mean", probs=0.5) {
 }
 
 X <- t(pgx$X)
-dim(X)
 ii <- paste0("gx:",wgcna$me.genes[['GXblue']])
 jj <- paste0("px:",wgcna$me.genes[['PXblack']])
 
@@ -354,8 +344,7 @@ R <- cor(M)
 R <- cor(t(xx), t(X[jj,]))
 
 pdf("moxbrca-module-corr.pdf",w=12,h=12)
-gx.heatmap(R, scale='none', mar=c(25,20),
-  keysize=0.6, cexRow=1.6, cexCol=1.6)
+gx.heatmap(R, scale='none', mar=c(25,20), keysize=0.6, cexRow=1.6, cexCol=1.6)
 dev.off()
 
 dim(R)  
