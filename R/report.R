@@ -219,6 +219,7 @@ getTopTables <- function(wgcna,
 #' @param rename Column name for renaming.
 #' @return List with top sets, genes, and pheno.
 #' @keywords internal
+#' @export
 getTopGenesAndSets <- function(wgcna,
                                annot = NULL,
                                module = NULL,
@@ -584,6 +585,7 @@ correct_dot_diagram <- function(diagram) {
 #' @param graph An igraph object.
 #' @return DOT format string.
 #' @keywords internal
+#' @export
 graph2dot <- function(graph) {
 
   aa <- names(igraph::vertex_attr(graph))
@@ -608,10 +610,11 @@ graph2dot <- function(graph) {
 #' @param dir Direction: "TB" or "LR".
 #' @return Modified DOT string.
 #' @keywords internal
+#' @export
 dot.rankdir <- function(dot, dir) {
 
-  if (dir=="TB") dot <- sub("rankdir=LR","rankdir=TB",dot)
-  if (dir=="LR") dot <- sub("rankdir=TB","rankdir=LR",dot)
+  if (dir == "TB") dot <- sub("rankdir=LR","rankdir=TB", dot)
+  if (dir == "LR") dot <- sub("rankdir=TB","rankdir=LR", dot)
 
   return(dot)
 
