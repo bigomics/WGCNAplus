@@ -1,31 +1,27 @@
+##-----------------------
+## Consensus WGCNA
+##-----------------------
 library(devtools)
-
-## Imports
-## gset.rankcor <- playbase::gset.rankcor
-## mat2gmt <- playbase::mat2gmt
-## mofa.merge_data2 <- playbase::mofa.merge_data2
-## ai.ask <- playbase::ai.ask
-## ai.create_image_gemini <- playbase::ai.create_image_gemini
-
-## Run Consensus WGCNA
 load_all()
+setwd("vignettes/")
 
-pgx <- playbase::pgx.load("~/Playground/omicsplayground/data/multi-liver.pgx")
-pgx <- playbase::pgx.initialize(pgx)
+X <- read.csv("./data/liver/expression.csv", row.names = 1)
+samples <- read.csv("./data/liver/samples.csv", row.names = 1)
+contrasts <- read.csv("./data/liver/contrasts.csv", row.names = 1)
+annot <- read.csv("./data/liver/annot.csv", row.names = 1)
+GMT <- readRDS("./data/liver/gmt.RDS")
 
-group <- pgx$samples$sex
+dim(X)
+group <- samples$sex
 xx <- tapply(1:ncol(pgx$X), group, function(ii) pgx$X[,ii])
-names(xx)
 
 par(mfrow = c(2, 3), mar = c(5, 5, 3, 1), cex = 1.4)
 plotPowerAnalysis(t(xx[[1]]), setPar = FALSE)
 plotPowerAnalysis(t(xx[[2]]), setPar = FALSE)
 
-## This runs consensus WGCNA on an expression list
-names(xx)
-Y <- pgx$samples[,3:6]
-
-cons <- runConsensusWGCNA(
+## Run consensus WGCNA on an expression list
+Y <- samples[, 3:6]
+cons <- WGCNAplus::runConsensusWGCNA(
   xx,
   phenoData = Y,
   power = 6,
@@ -43,17 +39,16 @@ cons <- runConsensusWGCNA(
   gsea.mingenes = 10,
   summary = TRUE,
   verbose = 1
-) 
+)
 
 names(cons)
 cons$net$power
 
 x11()
-par(cex = 1.4)
-plotDendroAndColors(
+WGCNAplus::plotDendroAndColors(
   cons,
   marAll = c(2, 10, 3, 1),
-  show.traits = 1,
+  show.traits = FALSE, ## TRUE
   show.kme = 0,
   use.tree = 0,
   colorHeight = 0.2,
@@ -62,20 +57,18 @@ plotDendroAndColors(
 )
 
 head(cons$datTraits)
-plotModuleScores(cons, trait = "ab_fat", nmax = 9)
-plotModuleScores(cons$layers[[1]], trait = "ab_fat", nmax = 9)
+WGCNAplus::plotModuleScores(cons, trait = "ab_fat", nmax = 9)
+WGCNAplus::plotModuleScores(cons$layers[[1]], trait = "ab_fat", nmax = 9)
 
-plotConsensusTraitCorrelation(cons, traits = NULL) 
+WGCNAplus::plotConsensusTraitCorrelation(cons, traits = NULL) 
 
 ## gene statistics
-load_all()
-
-top <- getTopGenesAndSets(cons, module=NULL, ntop=10) 
+top <- WGCNAplus::getTopGenesAndSets(cons, module = NULL, ntop = 10) 
 names(top)
 lapply(top$genes,head)
 lapply(top$sets,head)
 
-stats <- computeConsensusGeneStats(cons)
+stats <- WGCNAplus::computeConsensusGeneStats(cons)
 names(stats)
 
 head(stats[[1]][[1]])
@@ -83,15 +76,14 @@ module = "MEblue"
 trait = "sex=Male"
 trait = "ab_fat"
 
-stats2 <- getConsensusGeneStats(cons, stats=stats, trait=trait, module=module)
+stats2 <- WGCNAplus::getConsensusGeneStats(cons, stats = stats, trait = trait, module = module)
 names(stats2)
 head(stats2[['full']])
 head(stats2[['consensus']])
 
 ## enrichment
-GMT = Matrix::t(playdata::GSETxGENE)
-annot = pgx$genes
-cons$gsea <- computeConsensusModuleEnrichment(
+# GMT = Matrix::t(playdata::GSETxGENE)
+cons$gsea <- WGCNAplus::computeConsensusModuleEnrichment(
   cons,
   GMT = GMT,
   annot = annot,
