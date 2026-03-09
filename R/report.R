@@ -280,7 +280,10 @@ getTopGenesAndSets <- function(wgcna,
     topgenes <- NULL
   }
 
-  list(sets = topsets, genes = topgenes, pheno = toppheno)
+  LL <- list(sets = topsets, genes = topgenes, pheno = toppheno)
+
+  return(LL)
+  
 }
 
 
