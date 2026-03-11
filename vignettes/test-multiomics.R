@@ -1,48 +1,57 @@
+##-----------------------
+## Multi-omics WGCNA
+##-----------------------
 library(devtools)
 load_all()
 
-## Imports
-## gset.rankcor <- playbase::gset.rankcor
-## mat2gmt <- playbase::mat2gmt
-## mofa.merge_data2 <- playbase::mofa.merge_data2
-## ai.ask <- playbase::ai.ask
-## ai.create_image_gemini <- playbase::ai.create_image_gemini
-lasagna.multisolve <- playbase::lasagna.multisolve
+X <- read.csv("./data/multiomicsBRCA/expression.csv", row.names = 1)
+samples <- read.csv("./data/multiomicsBRCA/samples.csv", row.names = 1)
+contrasts <- read.csv("./data/multiomicsBRCA/contrasts.csv", row.names = 1)
+GMT <- readRDS("./data/multiomicsBRCA/gmt.RDS")
+annot <- read.csv("./data/multiomicsBRCA/annot.csv", row.names = 1)
 
-##--------------------------------------------------------------------
-## Compute multi-omics
-##--------------------------------------------------------------------
-
-pgx <- playbase::pgx.load("~/Playground/omicsplayground/data/mox-brca.pgx")
-pgx <- playbase::pgx.initialize(pgx)
-
-dataX <- mofa.split_data(pgx$X)
+dataX <- WGCNAplus::mofa.split_data(X)
 names(dataX)
 dataX <- dataX[c("mir","gx","px")]
 
-annot <- pgx$genes
-GMT0 <- rename_by2(getPlaydataGMT(), annot, "symbol")
-GMT1 <- rename_by2(pgx$GMT, annot, "symbol")
-GMT <-  merge_sparse_matrix(GMT0, GMT1)
-dim(GMT)
+annot$symbol <- make.unique(annot$symbol)
+GMT0 <- WGCNAplus::rename_by2(getPlaydataGMT(), annot, "symbol")
+GMT1 <- WGCNAplus::rename_by2(GMT, annot, "symbol")
+GMT <-  WGCNAplus::merge_sparse_matrix(GMT0, GMT1)
+rm(GMT0,GMT1); gc()
 head(rownames(GMT))
 tail(rownames(GMT))
 
-wgcna <- computeWGCNA_multiomics(pgx$X, pgx$samples, annot=pgx$genes, report=FALSE)
-wgcna <- computeWGCNA_multiomics(dataX, pgx$samples, annot=pgx$genes,
-  GMT=GMT, minmodsize = 5, mergeCutHeight = 0.6)
-wgcna <- computeWGCNA_multiomics(dataX, pgx$samples, GMT=NULL)
+wgcna <- WGCNAplus::computeWGCNA_multiomics(
+  dataX = dataX,
+  samples = samples,
+  annot = annot,
+  GMT = GMT,
+  minmodsize = 5,
+  mergeCutHeight = 0.6,
+  report = TRUE
+)
 
-wgcna <- computeWGCNA_multiomics(dataX, pgx$samples, GMT=GMT, 
-  power=12, minmodsize = 3, minKME=0.1, mergeCutHeight = 0.5)
+wgcna <- WGCNAplus::computeWGCNA_multiomics(
+  dataX = dataX,
+  samples = samples,
+  annot = annot,
+  GMT = GMT,
+  minmodsize = 3,
+  minKME = 0.1,
+  mergeCutHeight = 0.5,
+  report = TRUE
+)
+
 
 wgcna$me.genes
 
 names(wgcna)
 names(wgcna$layers)
-names(wgcna$layers[[1]])
+names(wgcna$layers[['gx']])
+names(wgcna$layers[['px']])
+names(wgcna$layers[['mir']])
 
-head(wgcna$layers[[1]]$gsea[[1]])
 names(wgcna$layers[[1]]$gsea)
 names(wgcna$layers[[2]]$gsea)
 names(wgcna$layers[[3]]$gsea)
@@ -50,32 +59,45 @@ names(wgcna$layers[[3]]$gsea)
 ##--------------------------------------------------------------------
 ## Figures
 ##--------------------------------------------------------------------
-load_all()
-
-par(mfrow=c(1,1),cex=1.4)
-plotMultiDendroAndColors(
-  wgcna, marAll=c(2,7,3,1),  
-  show.traits=1, show.contrasts=1,
-  show.kme=0, use.tree=0,
+par(mfrow = c(1, 1), cex = 1.4)
+WGCNAplus::plotMultiDendroAndColors(
+  wgcna,
+  main = "",
+  marAll = c(1, 7, 3, 1),  
+  show.traits = 1,
+  show.contrasts = 1,
+  show.kme = 0,
+  use.tree = 0,
   colorHeight = 0.5
 )
 
-par(mfrow=c(1,1),mar=c(6.5,9,4,2), cex=1.4)
-plotModuleTraitHeatmap(
-  wgcna, cluster=TRUE, multi=TRUE,
-  main="Module-Trait Heatmap", setpar=FALSE,
-  transpose=TRUE, text=FALSE)
+par(mfrow = c(1, 1), mar = c(6.5, 9, 4, 2), cex = 1.4)
+WGCNAplus::plotModuleTraitHeatmap(
+  wgcna,
+  cluster = TRUE,
+  multi = TRUE,
+  main = "Module-Trait Heatmap",
+  setpar = FALSE,
+  transpose = TRUE,
+  text = FALSE
+)
 
 ## multi-omics ME clustering
-par(mfrow=c(1,1),mar=c(6.5,9,4,2), cex=1.4)
-plotEigenGeneAdjacencyHeatmap(
-  wgcna$layers, multi=TRUE,
-  plotDendro=0, plotHeatmap=1,
-  add_traits = 1, add_me = TRUE,
-  nmax = 30, text = FALSE, pstar = TRUE,
+par(mfrow = c(1, 1), mar = c(6.5, 9, 4, 2), cex = 1.4)
+WGCNAplus::plotEigenGeneAdjacencyHeatmap(
+  wgcna$layers,
+  multi = TRUE,
+  plotDendro = 0,
+  plotHeatmap = 1,
+  add_traits = 1,
+  add_me = TRUE,
+  nmax = 30,
+  text = FALSE,
+  pstar = TRUE,
   mar1 = c(6, 4.5, 1.8, 0),
   mar2 = c(9, 12, 4, 2),
-  cex.lab=1.2, colorlabel=TRUE
+  cex.lab = 1,
+  colorlabel = TRUE
 )
 
 ##--------------------------------------------------------------------
@@ -83,7 +105,7 @@ plotEigenGeneAdjacencyHeatmap(
 ##--------------------------------------------------------------------
 load_all()
 
-topmodules <- getTopModules(wgcna, topratio=0.9, multi=TRUE)
+topmodules <- WGCNAplus::getTopModules(wgcna, topratio = 0.9, multi = TRUE)
 topmodules
 
 annot <- pgx$genes

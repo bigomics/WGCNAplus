@@ -528,6 +528,7 @@ computeConsensusMatrix <- function(matlist,
 }
 
 #' Compute consensus enrichment by calculating overlapping enriched terms.
+#' @export
 computeConsensusModuleEnrichment <- function(cons,
                                              GMT,
                                              annot,

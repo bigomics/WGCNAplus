@@ -73,16 +73,22 @@ names(stats)
 
 head(stats[[1]][[1]])
 module = "MEblue"
-trait = "sex=Male"
-trait = "ab_fat"
+trait = "length_cm"
+trait = "other_fat"
+trait = "total_fat"
 
 stats2 <- WGCNAplus::getConsensusGeneStats(cons, stats = stats, trait = trait, module = module)
 names(stats2)
 head(stats2[['full']])
 head(stats2[['consensus']])
 
+cons.modules <- stats2[["consensus"]]$module
+cons.modules <- unique(cons.modules[which(stats2[["consensus"]]$consensus=="C")])
+cons.modules
+
 ## enrichment
 # GMT = Matrix::t(playdata::GSETxGENE)
+lapply(cons$datExpr,dim)
 cons$gsea <- WGCNAplus::computeConsensusModuleEnrichment(
   cons,
   GMT = GMT,
@@ -93,8 +99,13 @@ cons$gsea <- WGCNAplus::computeConsensusModuleEnrichment(
 )
 
 names(cons$gsea)
+
+top.gs <- head(cons$gsea[['MEred']]$geneset,100) 
+head(top.gs,20)
+
 top.gs <- head(cons$gsea[['MEblue']]$geneset,100) 
 head(top.gs,20)
+
 
 ai_model = "qwen3:1.7b"
 ai_model = "groq:openai/gpt-oss-20b"
