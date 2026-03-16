@@ -288,6 +288,7 @@ computeWGCNA <- function(X,
 #' @param verbose Verbosity level.
 #' @return List mimicking blockwiseModules output.
 #' @keywords internal
+#' @export
 computeModules <- function(datExpr,
                            power = 6,
                            networkType = "signed",
@@ -530,6 +531,7 @@ computeModules <- function(datExpr,
 #' @param lowrank Low-rank approximation dimension.
 #' @return TOM similarity matrix.
 #' @keywords internal
+#' @export
 fastTOMsimilarity <- function(A, lowrank = 20) {
 
   # https://stackoverflow.com/questions/56574729
@@ -575,6 +577,7 @@ fastTOMsimilarity <- function(A, lowrank = 20) {
 #' @param MEs Pre-computed module eigengenes.
 #' @return List with merged colors and eigengenes.
 #' @keywords internal
+#' @export
 mergeCloseModules <- function(datExpr,
                               colors,
                               cutHeight,
@@ -609,6 +612,7 @@ mergeCloseModules <- function(datExpr,
 #' @param method Merging method (1 or 2).
 #' @return Merged hclust dendrogram object.
 #' @keywords internal
+#' @export
 merge_block_dendrograms <- function(net,
                                     X,
                                     method = 1) {
