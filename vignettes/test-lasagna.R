@@ -2,7 +2,6 @@
 ## LASAGNA
 ##-----------
 library(devtools)
-library(igraph)
 load_all()
 setwd("vignettes/")
 
@@ -41,27 +40,27 @@ wgcna <- WGCNAplus::computeWGCNA_multiomics(
 names(wgcna)
 wgcna$me.genes
 
-par(mfrow = c(1, 1), cex = 1.4)
-WGCNAplus::plotMultiDendroAndColors(
-  wgcna,
-  marAll = c(2,7,3,1),  
-  show.traits = 1,
-  show.contrasts = 1,
-  show.kme = 0,
-  use.tree = 0,
-  colorHeight = 0.5
-)
+## par(mfrow = c(1, 1), cex = 1.4)
+## WGCNAplus::plotMultiDendroAndColors(
+##   wgcna,
+##   marAll = c(2,7,3,1),  
+##   show.traits = 1,
+##   show.contrasts = 1,
+##   show.kme = 0,
+##   use.tree = 0,
+##   colorHeight = 0.5
+## )
 
-par(mfrow = c(1, 1), mar = c(8, 11, 4, 2), cex = 1.2)
-WGCNAplus::plotModuleTraitHeatmap(
-  wgcna,
-  cluster = TRUE,
-  main = "Module-Trait Heatmap",
-  setpar = FALSE,
-  transpose = TRUE,
-  text = FALSE,
-  multi = TRUE
-)
+## par(mfrow = c(1, 1), mar = c(8, 11, 4, 2), cex = 1.2)
+## WGCNAplus::plotModuleTraitHeatmap(
+##   wgcna,
+##   cluster = TRUE,
+##   main = "Module-Trait Heatmap",
+##   setpar = FALSE,
+##   transpose = TRUE,
+##   text = FALSE,
+##   multi = TRUE
+## )
 
 
 ##--------------------
@@ -86,21 +85,22 @@ obj <- lasagna::create_model(
 )
 names(obj)
 
-
+require(igraph)
 ## color by WGCNA clustering
 wgcna$me.genes
 table(wgcna$me.colors)
 head(wgcna$me.colors)
-V(obj$graph)$color <- wgcna$me.colors[V(obj$graph)$name]
-V(obj$graph)$color[is.na(V(obj$graph)$color)] <- "red"
-table(V(obj$graph)$color)
+igraph::V(obj$graph)$color <- wgcna$me.colors[V(obj$graph)$name]
+igraph::V(obj$graph)$color[is.na(V(obj$graph)$color)] <- "red"
+table(igraph::V(obj$graph)$color)
 
 ## solve the graph for a certain phenotype
 colnames(obj$Y)
 pheno = colnames(obj$Y)[1]
 pheno = colnames(obj$Y)[2]
 pheno = colnames(obj$Y)[3]
-pheno = colnames(obj$Y)[13]
+pheno
+
 graph <- lasagna::solve(
   obj,
   pheno,

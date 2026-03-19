@@ -3,6 +3,7 @@
 ##-----------------------
 library(devtools)
 load_all()
+setwd("vignettes/")
 
 X <- read.csv("./data/multiomicsBRCA/expression.csv", row.names = 1)
 samples <- read.csv("./data/multiomicsBRCA/samples.csv", row.names = 1)
@@ -164,10 +165,7 @@ if(require("lasagna")) {
   xx <- lapply(ww, function(m) t(m$net$MEs))
   lapply(xx,dim)
   
-  data <- list(
-    X = xx,
-    samples = ww[[1]]$datTraits
-  )
+  data <- list(X = xx, samples = ww[[1]]$datTraits)
 
   lasagna <- lasagna::create_model(
     data,
