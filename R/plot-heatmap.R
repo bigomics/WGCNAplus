@@ -200,14 +200,14 @@ plotLabeledCorrelationHeatmap <- function(R,
     R0[is.na(R0)] <- 0
     is.sym <- nrow(R) == ncol(R) && all(rownames(R) == colnames(R))
     if (is.dist) {
-      ii <- hclust(as.dist(abs(R0)))$order
+      ii <- fastcluster::hclust(as.dist(abs(R0)))$order
       jj <- ii
     } else if (is.sym) {
-      ii <- hclust(dist(R0), method = "average")$order
+      ii <- fastcluster::hclust(dist(R0), method = "average")$order
       jj <- ii
     } else {
-      ii <- hclust(dist(R0), method = "average")$order
-      jj <- hclust(dist(t(R0)), method = "average")$order
+      ii <- fastcluster::hclust(dist(R0), method = "average")$order
+      jj <- fastcluster::hclust(dist(t(R0)), method = "average")$order
     }
     R <- R[ii, jj]
   }
@@ -334,7 +334,7 @@ plotModuleHeatmap <- function(wgcna,
     R <- cor(wgcna$datExpr[, genes])
     R <- sign(R) * abs(R)**rgamma
     if (cluster) {
-      ii <- hclust(as.dist(1 - R), method = "average")$order
+      ii <- fastcluster::hclust(as.dist(1 - R), method = "average")$order
       R <- R[ii, ii]
     }
     R[abs(R) < min.rho] <- NA

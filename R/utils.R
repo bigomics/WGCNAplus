@@ -101,7 +101,7 @@ checkDendroHeights <- function(datExpr,
   for (i in 1:length(powers)) {
     A <- WGCNA::adjacency(tX, power = powers[i], type = "signed")
     TOM <- fastTOMsimilarity(A, lowrank = 40)
-    hc <- hclust(as.dist(1 - TOM), method = "average")
+    hc <- fastcluster::hclust(as.dist(1 - TOM), method = "average")
     ht[[i]] <- hc$height
   }
 

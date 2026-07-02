@@ -64,7 +64,7 @@ plotEigenGeneClusterDendrogram <- function(wgcna = NULL,
     ## plot dendrogram with hclust function
     if (setMargins && horiz) par(mar = c(4, 4, 4, 8))
     if (setMargins && !horiz) par(mar = c(8, 4, 4, 1))
-    hc <- hclust(as.dist(1 - cor(ME)), method = "average")
+    hc <- fastcluster::hclust(as.dist(1 - cor(ME)), method = "average")
     if (plot) {
       save.labels <- hc$labels
       if (!showlabels) hc$labels <- rep("", ncol(ME))
@@ -226,9 +226,9 @@ plotEigenGeneAdjacencyHeatmap <- function(wgcna,
 
   if (fixclust) {
     ii <- rownames(R)
-    hc <- hclust(as.dist(1 - R0[ii, ii]), method = "average")
+    hc <- fastcluster::hclust(as.dist(1 - R0[ii, ii]), method = "average")
   } else {
-    hc <- hclust(as.dist(1 - R0), method="average")
+    hc <- fastcluster::hclust(as.dist(1 - R0), method="average")
   }
 
   if (plotDendro) {
@@ -327,8 +327,8 @@ plotMultiEigengeneCorrelation <- function(wgcna,
     }
 
     ## cluster unweighted matrix
-    ii <- hclust(dist(R1), method = "average")$order
-    jj <- hclust(dist(t(R1)), method = "average")$order
+    ii <- fastcluster::hclust(dist(R1), method = "average")$order
+    jj <- fastcluster::hclust(dist(t(R1)), method = "average")$order
     R1 <- R1[ii, jj]
 
     ## This conditions the correlation on phenotype. Important.
@@ -402,7 +402,7 @@ plotEigenGeneGraph <- function(wgcna,
   ## Recalculate MEs with color as labels
   corx <- cor(ME, use = "pairwise")
   corx[is.na(corx)] <- 0
-  clust <- hclust(as.dist(1 - corx))
+  clust <- fastcluster::hclust(as.dist(1 - corx))
   phylo <- ape::as.phylo(clust)
   gr <- igraph::as.igraph(phylo, directed = FALSE)
 
@@ -550,11 +550,11 @@ plotSampleDendroAndColors <- function(wgcna,
     corx <- cor(t(ME0), use = "pairwise")
   }
   corx[is.na(corx)] <- 0
-  sampleTree <- hclust(as.dist(1 - corx), method = "average")
+  sampleTree <- fastcluster::hclust(as.dist(1 - corx), method = "average")
 
   corx <- cor(ME, use = "pairwise")
   corx[is.na(corx)] <- 0
-  jj <- hclust(as.dist(1 - corx))$order
+  jj <- fastcluster::hclust(as.dist(1 - corx))$order
   colors <- WGCNA::numbers2colors(ME[, jj])
 
   if (justdata) return(ME)

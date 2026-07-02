@@ -369,7 +369,7 @@ computeModules <- function(datExpr,
 
   ## clustering
   if (verbose > 0) message("Clustering features using ", clustMethod, " linkage")
-  geneTree <- stats::hclust(as.dist(dissTOM), method = clustMethod)
+  geneTree <- fastcluster::hclust(as.dist(dissTOM), method = clustMethod)
 
   ## sometimes there is a height error. following is a fix.
   geneTree$height <- round(geneTree$height, 6)
@@ -587,7 +587,7 @@ mergeCloseModules <- function(datExpr,
     MEs <- WGCNA::moduleEigengenes(datExpr, colors = colors)$eigengenes
   }
 
-  hc <- hclust(as.dist(1 - cor(MEs)), method = "average")
+  hc <- fastcluster::hclust(as.dist(1 - cor(MEs)), method = "average")
   idx <- cutree(hc, h = cutHeight)
   names(idx) <- sub("^ME", "", names(idx))
   new.colors <- colors
@@ -635,7 +635,7 @@ merge_block_dendrograms <- function(net,
 
   ## compute parent dendrogram
   M <- do.call(rbind, mx)
-  hclust_p <- hclust(dist(M), method = "average")
+  hclust_p <- fastcluster::hclust(dist(M), method = "average")
   dend_p <- as.dendrogram(hclust_p)
   dend.list <- lapply(hc, as.dendrogram)
 

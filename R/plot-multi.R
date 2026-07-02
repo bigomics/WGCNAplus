@@ -181,8 +181,8 @@ plotPreservationModuleTraits <- function(pres,
   if (order.by == "clust") {
     consZ1 <- consZ
     consZ1[is.na(consZ1)] <- 0
-    ii <- hclust(dist(consZ1))$order
-    jj <- hclust(dist(t(consZ1)))$order
+    ii <- fastcluster::hclust(dist(consZ1))$order
+    jj <- fastcluster::hclust(dist(t(consZ1)))$order
     Zsummary <- Zsummary[ii, , drop = FALSE]
     consZ <- consZ[ii, jj, drop = FALSE]
   }
