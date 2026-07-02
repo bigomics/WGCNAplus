@@ -7,6 +7,7 @@
 #' @param Y Numeric matrix of variables.
 #' @return List with rho, pvalue, and n.
 #' @keywords internal
+#' @export
 cortest <- function(X, Y) {
 
   rho <- cor(X, Y, use = "pairwise.complete")
@@ -25,6 +26,7 @@ cortest <- function(X, Y) {
 #' @param datTraits Trait data matrix.
 #' @param TOM Topological overlap matrix or NULL.
 #' @return List of gene statistic matrices.
+#' @export
 computeGeneStats <- function(net,
                              datExpr,
                              datTraits,

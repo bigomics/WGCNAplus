@@ -14,6 +14,7 @@
 #' @param GMT Gene-set matrix or NULL.
 #' @param gset.methods Enrichment methods to use.
 #' @return Preservation result object with Z-summary.
+#' @export
 runPreservationWGCNA <- function(exprList,
                                  phenoData,
                                  contrasts = NULL,
