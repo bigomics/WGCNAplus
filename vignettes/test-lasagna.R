@@ -4,6 +4,7 @@
 library(devtools)
 library(igraph)
 load_all()
+load_all("~/Projects/lasagna")
 setwd("vignettes/")
 
 X <- read.csv("./data/multiomicsBRCA/expression.csv", row.names = 1)
@@ -67,56 +68,70 @@ WGCNAplus::plotModuleTraitHeatmap(
 ##--------------------
 ## LASAGNA (full)
 ##--------------------
-data <- list(X = dataX, samples = samples)
-lapply(data[[1]], names)
-lapply(data[[1]], dim)
-lapply(data[[1]], class)
 
-obj <- NULL
-obj <- lasagna::create_model(
-  data = data,
-  meta.type = "pheno",
-  ntop = 1000,
-  nc = 10,
-  add.sink = TRUE,
-  intra = FALSE,
-  fully_connect = FALSE,
-  add.revpheno = TRUE,
-  condition.edges = 1
-)
-names(obj)
+pheno="condition=Basal"
 
+wgcna.plot_lasagna <- function(wgcna, pheno, layout='tsne') {
 
-## color by WGCNA clustering
-wgcna$me.genes
-table(wgcna$me.colors)
-head(wgcna$me.colors)
-V(obj$graph)$color <- wgcna$me.colors[V(obj$graph)$name]
-V(obj$graph)$color[is.na(V(obj$graph)$color)] <- "red"
-table(V(obj$graph)$color)
+  xx <- lapply(wgcna$layers, function(s) t(s$datExpr))
+  Y <- wgcna$layers[[1]]$datTraits
+  
+  obj <- lasagna::create_model(
+    data = data,
+    X = xx,
+    meta = Y,
+    meta.type = "pheno",
+    ntop = 1000,
+    nc = 10,
+    add.sink = TRUE,
+    intra = FALSE,
+    fully_connect = FALSE,
+    add.revpheno = TRUE,
+    condition.edges = 1
+  )
+  names(obj)
 
-## solve the graph for a certain phenotype
-colnames(obj$Y)
-pheno = colnames(obj$Y)[1]
-pheno = colnames(obj$Y)[2]
-pheno = colnames(obj$Y)[3]
-pheno = colnames(obj$Y)[13]
-graph <- lasagna::solve(
-  obj,
-  pheno,
-  min_rho = 0.01,
-  max_edges = 1000,
-  value = "rho",
-  sp.weight = 1,
-  prune = FALSE
-) 
-graph
+  ## color by WGCNA clustering
+  wgcna$me.genes
+  table(wgcna$me.colors)
+  head(wgcna$me.colors)
+  V(obj$graph)$color <- wgcna$me.colors[V(obj$graph)$name]
+  V(obj$graph)$color[is.na(V(obj$graph)$color)] <- "red"
+  table(V(obj$graph)$color)
+
+  ## solve the graph for a certain phenotype
+  if(!pheno %in% colnames(obj$Y)) {
+    stop("pheno not in traits matrix")
+  }
+  graph <- lasagna::solve(
+    obj,
+    pheno,
+    min_rho = 0.01,
+    max_edges = 1000,
+    value = "rho",
+    sp.weight = 1,
+    prune = FALSE
+  ) 
+  graph
+
+  ## 3D lasagna
+  xpos <- layout_multipartite_3d(graph, obj$X, clust=layout)
+  p <- plot_3d(graph, layout=xpos, draw_edges=TRUE,
+    color.by="color", min_rho=0.0, sign_rho="both",
+    #edge_color = c("blue", "magenta"),
+    cex=0.9, cex.gamma=0.5, num_edges=200, znames=NULL) 
+
+  return(p)
+}
+
+wgcna.plot_lasagna(wgcna, pheno="condition=Basal", layout='tsne') 
+
 
 ## prune graph for cleaner plotting
 par(mfrow = c(1, 1), mar = c(1, 1, 1, 1)*0, cex = 0.9)
 mp <- lasagna::plot_multipartite(
   graph,
-  min.rho = 0.8,
+  min.rho = 0.6,
   ntop = 50,
   xdist = 2,
   color.var = "color",
@@ -127,12 +142,13 @@ mp <- lasagna::plot_multipartite(
   edge.sign = "both",
   edge.type = "inter",
   edge.gamma = 4,
+  #edge.colors = c("blue3","magenta4"),
   yheight = 0.9,
   normalize.edges = 1,
   strip.prefix = TRUE,
   prune = 0
 ) 
-
+  
 
 ##--------------------
 ## LASAGNA (modules)
@@ -145,7 +161,9 @@ lapply(xx,dim)
 data <- list(X = xx, samples = ww[[1]]$datTraits)
 
 lasagna <- lasagna::create_model(
-  data,
+  data = data,
+#  X = data$X,
+#  meta = data$samples,
   meta.type = "expanded",
   ntop = 2000,
   nc = 40,
