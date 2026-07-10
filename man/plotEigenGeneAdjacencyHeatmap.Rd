@@ -2,9 +2,8 @@
 % Please edit documentation in R/plot-eigengene.R
 \name{plotEigenGeneAdjacencyHeatmap}
 \alias{plotEigenGeneAdjacencyHeatmap}
-\title{Plot the adjacency correlation heatmap matrix of eigengenes with or
-without traits. This can show how traits cluster together with the
-eigengenes.}
+\title{Plot adjacency correlation heatmap matrix of eigengenes with or
+without traits. This can show how traits cluster with the eigengenes.}
 \usage{
 plotEigenGeneAdjacencyHeatmap(
   wgcna,
@@ -92,7 +91,6 @@ plotEigenGeneAdjacencyHeatmap(
 Correlation matrix (invisible), or matrix if justdata is TRUE.
 }
 \description{
-Plot the adjacency correlation heatmap matrix of eigengenes with or
-without traits. This can show how traits cluster together with the
-eigengenes.
+Plot adjacency correlation heatmap matrix of eigengenes with or
+without traits. This can show how traits cluster with the eigengenes.
 }

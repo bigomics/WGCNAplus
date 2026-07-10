@@ -421,7 +421,7 @@ plotFeatureUMAP <- function(wgcna, nhub = 3, method = "clust",
       stop("Package 'uwot' is required for UMAP computation")
     }
     cX <- t(scale(wgcna$datExpr, scale = scale)) ## WGCNA uses correlation
-    pos <- uwot::umap(cX)
+    pos <- uwot::umap2(cX)
     colnames(pos) <- c("UMAP-x", "UMAP-y")
     rownames(pos) <- colnames(wgcna$datExpr)
     ##  } else if(method=="mds") {

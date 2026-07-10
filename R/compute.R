@@ -254,7 +254,14 @@ computeWGCNA <- function(X,
     me.colors = me.colors,
     W = MVs,
     modTraits = modTraits,
-    stats = stats
+    stats = stats,
+    ## effective compute parameters (post-adjustment values)
+    power = net$power,
+    minModSize = minmodsize,
+    mergeCutHeight = mergeCutHeight,
+    minKME = minKME,
+    networktype = networktype,
+    tomtype = tomtype
   )
 
   message("[compute] completed. \n\n")
@@ -351,7 +358,7 @@ computeModules <- function(datExpr,
     adjacency[is.na(adjacency)] <- 0
     if (calcMethod == "fast") {
       if (verbose > 0) message("[computeModules] Computing TOM matrix using fast method...")
-      TOM <- fastTOMsimilarity(adjacency, lowrank = lowrank)
+      TOM <- fastTOMsimilarity(adjacency, lowrank = lowrank, tomtype = TOMType)
     } else if (calcMethod == "adjacency") {
       if (verbose > 0) message("[computeModules] Computing using adjacency as TOM matrix...")
       TOM <- adjacency
@@ -528,16 +535,21 @@ computeModules <- function(datExpr,
 
 #' Faster implementation of TOM computation using low-rank SVD approximation.
 #' @param A Adjacency matrix.
+#' @param tomtype TOM type (\"signed\" or \"unsigned\").
 #' @param lowrank Low-rank approximation dimension.
 #' @return TOM similarity matrix.
 #' @keywords internal
 #' @export
-fastTOMsimilarity <- function(A, lowrank = 20) {
+fastTOMsimilarity <- function(A, tomtype = "signed", lowrank = 20) {
 
   # https://stackoverflow.com/questions/56574729
   # Given square symmetric adjacency matrix A, its possible to
   # calculate the TOM matrix W without the use of for loops, which
   # speeds up the process tremendously
+
+  if (!tomtype %in% c("signed", "unsigned")) {
+    stop("only works for signed and unsigned tomtype")
+  }
 
   ## Adjacency matrix A can be approximated with SVD.
   ## This can make TOM calculation much faster.

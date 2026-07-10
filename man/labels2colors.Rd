@@ -2,7 +2,8 @@
 % Please edit documentation in R/utils.R
 \name{labels2colors}
 \alias{labels2colors}
-\title{Convert numeric labels to colors}
+\title{Convert numeric labels to colors
+Converts WGCNA labels (numeric or color) to colors.}
 \usage{
 labels2colors(colors, ...)
 }
@@ -15,5 +16,6 @@ labels2colors(colors, ...)
 Character vector of color names.
 }
 \description{
+Convert numeric labels to colors
 Converts WGCNA labels (numeric or color) to colors.
 }

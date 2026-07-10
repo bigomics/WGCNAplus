@@ -10,7 +10,9 @@ plotEigenGeneGraph(
   main = NULL,
   multi = FALSE,
   vcex = 1,
-  labcex = 1
+  labcex = 1,
+  mincor = 0.5,
+  as.phylo = TRUE
 )
 }
 \arguments{
@@ -25,6 +27,10 @@ plotEigenGeneGraph(
 \item{vcex}{Vertex size scaling factor.}
 
 \item{labcex}{Label size scaling factor.}
+
+\item{mincor}{Minimum correlation for non-phylo edge (ignored when as.phylo=TRUE).}
+
+\item{as.phylo}{If TRUE, use phylo-based graph layout (Kamada-Kawai).}
 }
 \value{
 NULL (invisible). Generates a plot.

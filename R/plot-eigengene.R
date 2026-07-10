@@ -373,6 +373,8 @@ plotMultiEigengeneCorrelation <- function(wgcna,
 #' @param multi Use multi-dataset mode.
 #' @param vcex Vertex size scaling factor.
 #' @param labcex Label size scaling factor.
+#' @param mincor Minimum correlation for non-phylo edge (ignored when as.phylo=TRUE).
+#' @param as.phylo If TRUE, use phylo-based graph layout (Kamada-Kawai).
 #' @return NULL (invisible). Generates a plot.
 #' @export
 plotEigenGeneGraph <- function(wgcna,
@@ -380,7 +382,9 @@ plotEigenGeneGraph <- function(wgcna,
                                main = NULL,
                                multi = FALSE,
                                vcex = 1,
-                               labcex = 1) {
+                               labcex = 1,
+                               mincor = 0.5,
+                               as.phylo = TRUE) {
 
   if (!requireNamespace("ape", quietly = TRUE)) {
     stop("Package 'ape' is required for eigengene graph plotting")
@@ -402,9 +406,19 @@ plotEigenGeneGraph <- function(wgcna,
   ## Recalculate MEs with color as labels
   corx <- cor(ME, use = "pairwise")
   corx[is.na(corx)] <- 0
-  clust <- fastcluster::hclust(as.dist(1 - corx))
-  phylo <- ape::as.phylo(clust)
-  gr <- igraph::as.igraph(phylo, directed = FALSE)
+
+  layout <- NULL
+  if (as.phylo) {
+    clust <- fastcluster::hclust(as.dist(1 - corx))
+    phylo <- ape::as.phylo(clust)
+    gr <- igraph::as.igraph(phylo, directed = FALSE)
+    layout <- igraph::layout_with_kk
+  } else {
+    adj <- (corx > mincor) * corx
+    gr <- igraph::graph_from_adjacency_matrix(adj, diag = FALSE,
+      mode = "undirected", weighted = TRUE)
+    layout <- igraph::layout_with_fr
+  }
 
   is.node <- grepl("Node", igraph::V(gr)$name)
   module.name <- igraph::V(gr)$name
@@ -427,7 +441,7 @@ plotEigenGeneGraph <- function(wgcna,
   igraph::V(gr)$size[is.na(igraph::V(gr)$size)] <- 0
 
   igraph::plot.igraph(gr,
-    layout = igraph::layout.kamada.kawai,
+    layout = layout,
     vertex.label.cex = 0.85 * labcex,
     edge.width = 3)
   

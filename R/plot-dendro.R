@@ -6,6 +6,7 @@
 #' @param show.traits Show trait correlations.
 #' @param show.contrasts Show contrast correlations.
 #' @param show.mat Custom matrix to show.
+#' @param show.tom Show TOM heatmap below dendrogram.
 #' @param clust Cluster columns by correlation.
 #' @param use.tree Tree index for consensus.
 #' @param block Block number to plot.
@@ -14,6 +15,10 @@
 #' @param nmax Maximum number of columns shown.
 #' @param marAll Margin sizes vector.
 #' @param setLayout Whether to set layout.
+#' @param cex Character expansion factor for plot.
+#' @param layout.ncols Number of columns in layout grid.
+#' @param layout.heights Relative heights of dendrogram, colors, and TOM.
+#' @param tom.subsample Downsample TOM to this many genes for display.
 #' @param ... Additional arguments to WGCNA::plotDendroAndColors.
 #' @return NULL (invisible). Generates a plot.
 #' @export
@@ -24,6 +29,7 @@ plotDendroAndColors <- function(wgcna,
                                 show.traits = FALSE,
                                 show.contrasts = FALSE,
                                 show.mat = NULL,
+                                show.tom = FALSE,
                                 clust = TRUE,
                                 use.tree = 0,
                                 block = 1,
@@ -32,6 +38,10 @@ plotDendroAndColors <- function(wgcna,
                                 nmax = -1,
                                 marAll = c(0.4, 5, 1, 0.2),
                                 setLayout = TRUE,
+                                cex = 1,
+                                layout.ncols = 1,
+                                layout.heights = c(0.3, 1, 1),
+                                tom.subsample = 400,
                                 ...) {
 
   if ("net" %in% names(wgcna)) {
@@ -77,20 +87,26 @@ plotDendroAndColors <- function(wgcna,
   }
 
   calcKMEcolors <- function(X, Y) {
-    kme <- cor(X, Y, use="pairwise")
-    kme[is.na(kme)] <- 0
+    kme <- cor(X, Y, use = "pairwise")
+    ## Drop constant/degenerate columns (produce NaN in cor). This happens when
+    ## a trait is constant within a condition-split group (e.g. all samples in
+    ## the \"Basal\" split share condition=Basal, giving zero variance).
+    kme <- kme[, colSums(is.nan(kme)) == 0, drop = FALSE]
+    if (ncol(kme) == 0) {
+      return(matrix("white", nrow = length(gg), ncol = 0, dimnames = list(gg, NULL)))
+    }
     sdx <- matrixStats::colSds(X, na.rm = TRUE)
-    if (sd.wt>0) kme <- kme * (sdx / max(abs(sdx), na.rm = TRUE))**sd.wt
-    if (nmax>0 && nmax<ncol(kme)) {
-      sel <- head(order(-colMeans(kme**2)),nmax)
+    if (sd.wt > 0) kme <- kme * (sdx / max(abs(sdx), na.rm = TRUE))**sd.wt
+    if (nmax > 0 && nmax < ncol(kme)) {
+      sel <- head(order(-colMeans(kme**2)), nmax)
       kme <- kme[, sel, drop = FALSE]
     }
-    kmeColors <- rho2bluered(kme, a = 0.8)
-    kmeColors <- kmeColors[gg,,drop=FALSE]
-    if(clust && ncol(kme)>2) {
-      cor.kme <- cor(kme,use="pairwise")
-      cor.kme[is.na(cor.kme)] <- 0
-      ii <- hclust(as.dist(1 - cor.kme))$order
+    kmeColors <- rho2bluered(kme)
+    kmeColors <- kmeColors[gg, , drop = FALSE]
+    if (clust && ncol(kme) > 2) {
+      cc <- cor(kme, use = "pairwise")
+      cc[!is.finite(cc)] <- 0
+      ii <- fastcluster::hclust(as.dist(1 - cc))$order
       kmeColors <- kmeColors[, ii, drop = FALSE]
     }
     kmeColors
@@ -190,6 +206,26 @@ plotDendroAndColors <- function(wgcna,
   }
 
   if (is.null(main)) main <- "Gene dendrogram and module colors"
+
+  if(setLayout) {
+    nc <- layout.ncols
+    layout.heights <- layout.heights / sum(layout.heights)
+    layout.heights <- c(
+      layout.heights[1],
+      layout.heights[2] * min(ncol(colors) / 10, 1),
+      layout.heights[3] * show.tom
+    )
+    layout.heights[2] <- max(layout.heights[2], 0.05)
+    layout.heights <- layout.heights + 0.01
+    layout.matrix <- matrix(1:(3 * nc), nrow = 3, ncol = nc)
+    graphics::layout(
+      mat = layout.matrix,
+      heights = layout.heights,
+      widths = rep(1, nc)
+    )
+    par(cex = cex)
+  }
+
   ## Plot the dendrogram and the module colors underneath
   WGCNA::plotDendroAndColors(
     dendro = geneTree,
@@ -200,10 +236,22 @@ plotDendroAndColors <- function(wgcna,
     addGuide = FALSE,
     guideHang = 0.05,
     marAll = marAll,
-    setLayout = setLayout,
+    setLayout = FALSE,
     main = main,
     ...
   )
+
+  if(show.tom && !is.null(wgcna$svTOM)) {
+    tom <- tcrossprod(wgcna$svTOM)
+    kk <- geneTree$order
+    kk <- kk[round(seq(1, length(kk), length.out = tom.subsample))]
+    tom <- tom[kk, kk]
+    par(mar = c(1, 8, 0, 0.5))
+    image(tom, xaxt = 'n', yaxt = 'n')
+  } else {
+    par(mar = c(0, 0, 0, 0))
+    plot.new()
+  }
 
 }
 
@@ -224,6 +272,8 @@ plotDendroAndColors <- function(wgcna,
 #' @param main Plot title string.
 #' @param colorHeight Relative height of color rows.
 #' @param marAll Margin sizes vector.
+#' @param show.tom Show TOM heatmap below dendrogram.
+#' @param tom.subsample Downsample TOM to this many genes.
 #' @param cex Character expansion factor.
 #' @return NULL (invisible). Generates a plot.
 #' @export
@@ -234,6 +284,8 @@ plotMultiDendroAndColors <- function(wgcna,
                                      show.traits = FALSE,
                                      show.contrasts = FALSE,
                                      show.mat = NULL,
+                                     show.tom = FALSE,
+                                     tom.subsample = 400,
                                      clust = TRUE,
                                      use.tree = 0,
                                      rm.na = TRUE,
@@ -264,6 +316,8 @@ plotMultiDendroAndColors <- function(wgcna,
       show.contrasts = show.contrasts,
       show.kme = show.kme,
       show.mat = show.mat,
+      show.tom = show.tom,
+      tom.subsample = tom.subsample,
       use.tree = use.tree,
       clust = clust,
       sd.wt = sd.wt,

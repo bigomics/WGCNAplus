@@ -2,8 +2,7 @@
 % Please edit documentation in R/consensus.R
 \name{computeConsensusModuleEnrichment}
 \alias{computeConsensusModuleEnrichment}
-\title{Compute consensus enrichment by calculating overlapping enriched
-terms.}
+\title{Compute consensus enrichment by calculating overlapping enriched terms.}
 \usage{
 computeConsensusModuleEnrichment(
   cons,
@@ -15,6 +14,5 @@ computeConsensusModuleEnrichment(
 )
 }
 \description{
-Compute consensus enrichment by calculating overlapping enriched
-terms.
+Compute consensus enrichment by calculating overlapping enriched terms.
 }

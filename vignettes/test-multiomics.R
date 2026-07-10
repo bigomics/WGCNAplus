@@ -3,7 +3,7 @@
 ##-----------------------
 library(devtools)
 load_all()
-setwd("vignettes/")
+if(basename(getwd())!="vignettes") setwd("vignettes/")
 
 X <- read.csv("./data/multiomicsBRCA/expression.csv", row.names = 1)
 samples <- read.csv("./data/multiomicsBRCA/samples.csv", row.names = 1)

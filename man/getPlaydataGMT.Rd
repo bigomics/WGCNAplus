@@ -2,13 +2,13 @@
 % Please edit documentation in R/playdata.R
 \name{getPlaydataGMT}
 \alias{getPlaydataGMT}
-\title{Get merged multiomics geneset x feature matrix. Combines geneset
-and metabolite sets.}
+\title{Get merged multiomics geneset x feature matrix.
+Combines geneset and metabolite sets.}
 \usage{
 getPlaydataGMT()
 }
 \description{
-Get merged multiomics geneset x feature matrix. Combines geneset
-and metabolite sets.
+Get merged multiomics geneset x feature matrix.
+Combines geneset and metabolite sets.
 }
 \keyword{internal}

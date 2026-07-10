@@ -9,7 +9,6 @@ Description: Extended Weighted Gene Coexpression Network Analysis (WGCNA)
     AI-powered module annotation, and comprehensive visualization.
 License: Dual Commercial and Non-Commercial
 Encoding: UTF-8
-RoxygenNote: 7.3.3
 Depends: R (>= 3.5)
 Imports:
     playbase,
@@ -43,3 +42,4 @@ Remotes:
     playdata=url::https://github.com/bigomics/playdata/archive/HEAD.zip,
     plaid=url::https://github.com/bigomics/playdata/archive/HEAD.zip
 Config/testthat/edition: 3
+Config/roxygen2/version: 8.0.0

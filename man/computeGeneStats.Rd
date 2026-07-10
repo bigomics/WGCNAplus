@@ -7,13 +7,13 @@
 computeGeneStats(net, datExpr, datTraits, TOM)
 }
 \arguments{
-\item{net}{WGCNA network object with MEs and colors.}
+\item{net}{WGCNA network object with MEs and colors, or a full wgcna result object.}
 
-\item{datExpr}{Expression data matrix.}
+\item{datExpr}{Expression data matrix (optional if net is a full wgcna object).}
 
-\item{datTraits}{Trait data matrix.}
+\item{datTraits}{Trait data matrix (optional if net is a full wgcna object).}
 
-\item{TOM}{Topological overlap matrix or NULL.}
+\item{TOM}{Topological overlap matrix or NULL (optional if net is a full wgcna object).}
 }
 \value{
 List of gene statistic matrices.

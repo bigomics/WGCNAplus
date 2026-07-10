@@ -2,7 +2,8 @@
 % Please edit documentation in R/utils.R
 \name{pickSoftThreshold}
 \alias{pickSoftThreshold}
-\title{Pick soft thresholding power}
+\title{Pick soft thresholding power
+Better (?) method to pick soft threshold (aka power).}
 \usage{
 pickSoftThreshold(
   datExpr,
@@ -33,5 +34,6 @@ pickSoftThreshold(
 Integer optimal soft-thresholding power.
 }
 \description{
+Pick soft thresholding power
 Better (?) method to pick soft threshold (aka power).
 }

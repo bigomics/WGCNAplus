@@ -18,7 +18,9 @@ runPreservationWGCNA(
   compute.stats = TRUE,
   compute.enrichment = TRUE,
   GMT = NULL,
-  gset.methods = c("fisher", "gsetcor", "xcor")
+  gset.methods = c("fisher", "gsetcor", "xcor"),
+  ai_model = "",
+  summary = FALSE
 )
 }
 \arguments{

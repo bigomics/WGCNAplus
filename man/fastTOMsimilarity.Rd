@@ -2,15 +2,14 @@
 % Please edit documentation in R/compute.R
 \name{fastTOMsimilarity}
 \alias{fastTOMsimilarity}
-\title{Faster implementation of TOM computation using low-rank SVD
-approximation.}
+\title{Faster implementation of TOM computation using low-rank SVD approximation.}
 \usage{
 fastTOMsimilarity(A, tomtype = "signed", lowrank = 20)
 }
 \arguments{
 \item{A}{Adjacency matrix.}
 
-\item{tomtype}{TOM type (signed/unsigned).}
+\item{tomtype}{TOM type (\"signed\" or \"unsigned\").}
 
 \item{lowrank}{Low-rank approximation dimension.}
 }
@@ -18,7 +17,6 @@ fastTOMsimilarity(A, tomtype = "signed", lowrank = 20)
 TOM similarity matrix.
 }
 \description{
-Faster implementation of TOM computation using low-rank SVD
-approximation.
+Faster implementation of TOM computation using low-rank SVD approximation.
 }
 \keyword{internal}

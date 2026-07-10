@@ -21,16 +21,28 @@ cortest <- function(X, Y) {
 }
 
 #' Compute general feature statistics after WGCNA results.
-#' @param net WGCNA network object with MEs and colors.
-#' @param datExpr Expression data matrix.
-#' @param datTraits Trait data matrix.
-#' @param TOM Topological overlap matrix or NULL.
+#' @param net WGCNA network object with MEs and colors, or a full wgcna result object.
+#' @param datExpr Expression data matrix (optional if net is a full wgcna object).
+#' @param datTraits Trait data matrix (optional if net is a full wgcna object).
+#' @param TOM Topological overlap matrix or NULL (optional if net is a full wgcna object).
 #' @return List of gene statistic matrices.
 #' @export
 computeGeneStats <- function(net,
-                             datExpr,
-                             datTraits,
-                             TOM) {
+                             datExpr = NULL,
+                             datTraits = NULL,
+                             TOM = NULL) {
+
+  ## Allow passing a full wgcna result object as net
+  if (all(c("net","datExpr","datTraits") %in% names(net))) {
+    datExpr <- net$datExpr
+    datTraits <- net$datTraits
+    TOM <- if(!is.null(net$svTOM)) net$svTOM else net$TOM
+    net <- net$net
+  }
+
+  if (is.null(datExpr) || is.null(datTraits)) {
+    stop("[computeGeneStats] ERROR: must provide datExpr, datTraits and TOM")
+  }
 
   kk <- intersect(rownames(datExpr), rownames(datTraits))
   datExpr <- datExpr[kk, , drop = FALSE]
@@ -121,7 +133,7 @@ computeGeneStats <- function(net,
   ## using TOM matrix. WARNING: this can create large TOM matrix
   geneCentrality <- NULL
   if (!is.null(TOM)) {
-    if (nrow(TOM) != ncol(TOM)) TOM <- TOM %*% Matrix::t(TOM)
+    if (nrow(TOM) != ncol(TOM)) TOM <- tcrossprod(TOM)
     if (is.null(dimnames(TOM))) {
       dimnames(TOM) <- list(colnames(datExpr), colnames(datExpr))
     }
@@ -230,13 +242,38 @@ getGeneStats <- function(wgcna,
   if (is.null(trait)) trait <- tt.cols
   trait <- intersect(trait, tt.cols)
 
+  ## Safe column selector: returns NA column when trait is missing from a stats
+  ## matrix (e.g. foldChange drops constant-within-group traits like
+  ## condition=Basal for the Basal split, while traitSignificance keeps them).
+  ## When length(tr)==1 returns a named vector so do.call(cbind, lapply(stats[p2],
+  ## safe_col)) preserves the list element names (p2 names) as column names.
+  safe_col <- function(x, tr) {
+    if (length(tr) == 1) {
+      if (is.null(x) || !tr %in% colnames(x)) {
+        return(setNames(rep(NA_real_, length(features)), features))
+      }
+      return(x[, tr])
+    }
+    if (is.null(x)) {
+      return(matrix(NA_real_, nrow = length(features), ncol = length(tr), dimnames = list(features, tr)))
+    }
+    present <- intersect(tr, colnames(x))
+    absent <- setdiff(tr, colnames(x))
+    out <- x[, present, drop = FALSE]
+    if (length(absent)) {
+      pad <- matrix(NA_real_, nrow = nrow(x), ncol = length(absent), dimnames = list(rownames(x), absent))
+      out <- cbind(out, pad)[, tr, drop = FALSE]
+    }
+    out
+  }
+
   if (length(trait) > 1) {
-    A2 <- lapply(stats[p2], function(x) x[, trait])
+    A2 <- lapply(stats[p2], function(x) safe_col(x, trait))
     for (i in 1:length(A2)) colnames(A2[[i]]) <- paste0(names(A2)[i], ".", colnames(A2[[i]]))
     A2 <- do.call(cbind, A2)
     df <- cbind(df, A2)
   } else if (length(trait) == 1) {
-    A2 <- lapply(stats[p2], function(x) x[, trait])
+    A2 <- lapply(stats[p2], function(x) safe_col(x, trait))
     A2 <- do.call(cbind, A2)
     df <- cbind(df, A2)
   } else {

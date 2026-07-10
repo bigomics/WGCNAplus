@@ -2,7 +2,10 @@
 % Please edit documentation in R/utils.R
 \name{rho2bluered}
 \alias{rho2bluered}
-\title{Convert correlation to blue-red colors}
+\title{Convert correlation to blue-red colors
+Converts correlation values [-1;1] to blue-white-red colors. Good
+for creating color labels for labeledHeatmaps that expect colors.
+NOTE: use WGCNA::numbers2colors???}
 \usage{
 rho2bluered(R, a = 1, f = 0.95)
 }
@@ -17,6 +20,7 @@ rho2bluered(R, a = 1, f = 0.95)
 Character matrix or vector of colors.
 }
 \description{
+Convert correlation to blue-red colors
 Converts correlation values [-1;1] to blue-white-red colors. Good
 for creating color labels for labeledHeatmaps that expect colors.
 NOTE: use WGCNA::numbers2colors???
