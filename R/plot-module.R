@@ -452,17 +452,18 @@ plotFeatureUMAP <- function(wgcna, nhub = 3, method = "clust",
       hubgenes <- setNames(probe2symbol(hubgenes, annot, "gene_name", fill_na = TRUE), names(hubgenes))
     }
   }
-  pgx.scatterPlotXY(
+  ## simple base scatter colored by module; replaces playbase::pgx.scatterPlotXY
+  plot(
     pos,
-    var = col1,
-    col = sort(unique(col1)),
-    hilight = genes1,
-    hilight2 = hubgenes,
-    cex.lab = 1.2,
-    label.clusters = FALSE,
-    title = main,
-    plotlib = plotlib
+    col = col1[rownames(pos)],
+    pch = 19, cex = 0.6,
+    main = main,
+    xlab = colnames(pos)[1], ylab = colnames(pos)[2]
   )
+  if (length(hubgenes) > 0) {
+    hg <- intersect(as.character(hubgenes), rownames(pos))
+    text(pos[hg, , drop = FALSE], labels = hg, cex = 0.8, pos = 3, xpd = NA)
+  }
 }
 
 

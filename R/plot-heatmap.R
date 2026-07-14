@@ -326,8 +326,13 @@ plotModuleHeatmap <- function(wgcna,
 
   if (type == "expression") {
     X <- t(wgcna$datExpr[, genes])
-    annot <- wgcna$datTraits
-    gx.heatmap(X, nmax = nmax, key = FALSE, keysize = 0.5, mar = heatmap.mar)
+    ## simple base heatmap (row-scaled, clustered); replaces playbase::gx.heatmap
+    stats::heatmap(
+      X,
+      scale = "row",
+      col = grDevices::colorRampPalette(c("blue", "white", "red"))(64),
+      margins = heatmap.mar
+    )
   }
 
   if (type == "correlation") {

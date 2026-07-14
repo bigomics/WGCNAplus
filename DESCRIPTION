@@ -11,8 +11,8 @@ License: Dual Commercial and Non-Commercial
 Encoding: UTF-8
 Depends: R (>= 3.5)
 Imports:
-    playbase,
     WGCNA,
+    limma,
     Matrix,
     matrixStats,
     irlba,
@@ -38,7 +38,6 @@ Suggests:
     DiagrammeRsvg,
     SuperCell
 Remotes:
-    playbase=url::https://github.com/bigomics/playbase/archive/HEAD.zip,
     playdata=url::https://github.com/bigomics/playdata/archive/HEAD.zip,
     plaid=url::https://github.com/bigomics/playdata/archive/HEAD.zip
 Config/testthat/edition: 3

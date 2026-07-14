@@ -1580,7 +1580,7 @@ ai.create_image_grok <- function(prompt,
 
   model <- sub("^grok:", "", model)
   ai.create_image_openai(
-    prompt, 
+    prompt,
     size = "default",
     format = format,
     filename = filename,
@@ -1589,6 +1589,360 @@ ai.create_image_grok <- function(prompt,
     api_key = api_key,
     user = user,
     organization = organization
-  ) 
+  )
 
+}
+
+
+## =========================================================================
+## Statistics helpers inlined from playbase (to drop the playbase dependency)
+## =========================================================================
+
+#' @title SVD-based missing value imputation
+#' @description Iterative SVD imputation. Inlined verbatim from playbase.
+#' @param X Numeric matrix with NAs to impute.
+#' @param nv Number of singular vectors.
+#' @param init Initialisation: NULL (row/col medians), "<q>%" quantile, or an
+#'   imputeMissing method name.
+#' @return Matrix with imputed values.
+#' @keywords internal
+#' @export
+svdImpute2 <- function(X, nv = 10, threshold = 0.001, init = NULL,
+                       maxSteps = 100, fill.empty = "median",
+                       infinite.na = TRUE,
+                       verbose = FALSE) {
+  if (infinite.na) X[is.infinite(X)] <- NA
+  ind.missing <- which(is.na(X), arr.ind = TRUE)
+  empty.rows <- which(rowMeans(is.na(X)) == 1)
+  empty.cols <- which(colMeans(is.na(X)) == 1)
+
+  if (is.null(nv)) {
+    nv <- max(1, round(mean(is.na(X)) * min(dim(X)))) ## heuristic..
+    message(paste0("setting nv to ", nv))
+  }
+  nv <- min(nv, round(min(dim(X)) / 3))
+
+  init.methods <- c("MinDet", "MinProb", "QRILC", "min")
+
+  if (!is.null(init) && is.character(init) && grepl("%", init)) {
+    ## initialize missing values with quantile fixed value
+    q <- as.numeric(sub("%", "", init))
+    init <- quantile(X[!is.na(X)], probs = q * 0.01)[1]
+    message(paste0("setting initial values to ", q, "%. init=", round(init, 4)))
+    X[ind.missing] <- init
+  } else if (!is.null(init) && is.character(init) &&
+    init %in% init.methods) {
+    ## initialize missing values with other impute method
+    message(paste("setting initial values using", init))
+    initX <- imputeMissing(X, method = init)
+    X[ind.missing] <- initX[ind.missing]
+  } else {
+    ## initialize missing values with col/row medians
+    row.mx <- apply(X, 1, median, na.rm = TRUE)
+    col.mx <- apply(X, 2, median, na.rm = TRUE)
+    row.mx[is.nan(row.mx)] <- NA
+    col.mx[is.nan(col.mx)] <- NA
+    X[ind.missing] <- row.mx[ind.missing[, 1]]
+    ind.missing2 <- which(is.na(X), arr.ind = TRUE)
+    X[ind.missing2] <- col.mx[ind.missing2[, 2]]
+  }
+
+  ## do SVD iterations
+  count <- 0
+  error <- Inf
+  Xold <- X
+  nv <- min(nv, dim(X) - 1)
+  while ((error > threshold) && (count < maxSteps)) {
+    if (nv < min(dim(X)) / 5) {
+      res <- irlba::irlba(X, nv = nv, nu = nv)
+    } else {
+      res <- svd(X, nv = nv, nu = nv)
+      res$d <- res$d[1:nv]
+    }
+    if (nv == 1) {
+      imx <- res$d * (res$u %*% t(res$v))
+    } else {
+      imx <- res$u %*% (diag(res$d) %*% t(res$v))
+    }
+    X[ind.missing] <- imx[ind.missing]
+    count <- count + 1
+    if (count > 0) {
+      error <- sqrt(sum((Xold - X)^2, na.rm = TRUE) / sum(Xold^2, na.rm = TRUE))
+      if (verbose) {
+        cat(count, ": change in estimate: ", error, "\n")
+      }
+    }
+    Xold <- X
+  }
+
+  ## extra corrections (refill empty columns or rows)
+  has.empty <- (length(empty.rows) > 0 || length(empty.cols) > 0)
+  if (has.empty && fill.empty == "NA") {
+    if (length(empty.rows)) X[empty.rows, ] <- NA
+    if (length(empty.cols)) X[, empty.cols] <- NA
+  }
+  if (has.empty && fill.empty == "sample") {
+    ii <- which(
+      (!ind.missing[, 1] %in% empty.rows) &
+        (!ind.missing[, 2] %in% empty.cols)
+    )
+    mm <- X[ind.missing[ii, ]]
+    if (length(empty.rows) && length(mm)) {
+      n1 <- length(X[empty.rows, ])
+      message("[svdImpute2] warning: empty rows : n1 = ", n1)
+      X[empty.rows, ] <- sample(mm, n1, replace = TRUE)
+    }
+    if (length(empty.cols) && length(mm)) {
+      n2 <- length(X[, empty.cols])
+      message("[svdImpute2] warning: empty cols : n2 = ", n2)
+      X[, empty.cols] <- sample(mm, n2, replace = TRUE)
+    }
+  }
+
+  return(X)
+}
+
+#' @title Impute missing values
+#' @description Inlined from playbase, trimmed to the pure-R methods WGCNAplus
+#'   uses. Only "SVD2" and "rowmeans" are kept; the original's LLS / bpca /
+#'   msImpute / NMF / RF / MSnbase branches pulled pcaMethods, MSnbase,
+#'   missForest and msImpute and are dropped.
+#' @param X Numeric matrix to impute.
+#' @param method Imputation method(s); one or both of "SVD2", "rowmeans".
+#' @return Matrix with imputed values, or NULL if no method matched.
+#' @keywords internal
+#' @export
+imputeMissing <- function(X, method = "SVD2", nv = 5,
+                          keep.limits = FALSE, infinite.na = TRUE) {
+  ## ponytail: trimmed to pure-R methods; add a branch back if a caller needs
+  ## LLS/bpca/etc (each drags its own Bioc/CRAN impute dependency).
+  if (infinite.na) X[is.infinite(X)] <- NA
+  impX <- list()
+
+  if ("rowmeans" %in% method) {
+    cx <- X
+    ii <- which(is.na(cx), arr.ind = TRUE)
+    cx[ii] <- rowMeans(cx, na.rm = TRUE)[ii[, 1]]
+    ii <- which(is.na(cx), arr.ind = TRUE)
+    cx[ii] <- colMeans(cx, na.rm = TRUE)[ii[, 2]]
+    ii <- which(is.na(cx))
+    cx[ii] <- mean(cx, na.rm = TRUE)
+    impX[["rowmeans"]] <- cx
+  }
+
+  if ("SVD2" %in% method) {
+    impX[["SVD2"]] <- svdImpute2(X, nv = nv, init = "5%")
+  }
+
+  if (length(impX) == 0) {
+    return(NULL)
+  }
+
+  if (keep.limits) {
+    minx <- min(X, na.rm = TRUE)
+    maxx <- max(X, na.rm = TRUE)
+    impX <- lapply(impX, function(x) pmin(pmax(x, minx), maxx))
+  }
+
+  if (length(impX) > 1) {
+    metaX <- do.call(cbind, lapply(impX, as.vector))
+    metaX <- matrix(rowMeans(metaX, na.rm = TRUE),
+      nrow = nrow(X), ncol = ncol(X), dimnames = dimnames(X)
+    )
+  } else {
+    metaX <- impX[[1]]
+  }
+
+  ## any remaining NA we fill with col/row medians
+  if (any(is.na(metaX))) {
+    missing <- which(is.na(metaX), arr.ind = TRUE)
+    row.mx <- apply(metaX, 1, median, na.rm = TRUE)
+    col.mx <- apply(metaX, 2, median, na.rm = TRUE)
+    metaX[missing] <- rowMeans(cbind(row.mx[missing[, 1]], col.mx[missing[, 2]]), na.rm = TRUE)
+  }
+
+  metaX
+}
+
+#' @title Differential expression analysis using limma
+#' @description Inlined from playbase. Only the default \code{method = 1} path
+#'   is kept (the only one WGCNAplus calls); the method 2/3 branches needed
+#'   playbase's makeDirectContrasts/makeFullContrasts and are dropped.
+#' @param X Expression matrix, genes in rows, samples in columns.
+#' @param pheno Phenotype vector/factor.
+#' @return Data frame with limma results.
+#' @keywords internal
+#' @export
+gx.limma <- function(X,
+                     pheno,
+                     B = NULL,
+                     remove.na = TRUE,
+                     fdr = 0.05,
+                     compute.means = TRUE,
+                     lfc = 0.20,
+                     max.na = 0.20,
+                     sort.by = "FC",
+                     ref = c(
+                       "ctrl", "ctr", "control", "ct", "dmso", "nt", "0", "0h", "0hr",
+                       "non", "no", "not", "neg", "negative", "ref", "veh", "vehicle",
+                       "wt", "wildtype", "untreated", "normal", "false", "healthy"
+                     ),
+                     trend = FALSE,
+                     robust = FALSE,
+                     method = 1,
+                     f.test = FALSE,
+                     verbose = 1) {
+  if (method != 1) {
+    stop("[gx.limma] vendored copy supports method = 1 only")
+  }
+  if (!is.null(B) && NCOL(B) == 1) {
+    B <- matrix(B, ncol = 1)
+    rownames(B) <- rownames(pheno)
+    colnames(B) <- "batch"
+  }
+
+  ## detect single sample case
+  is.single <- (max(table(pheno), na.rm = TRUE) == 1)
+  if (is.single) {
+    message("[gx.limma] WARNING: no replicates, duplicating samples...")
+    X <- cbind(X, X)
+    pheno <- c(pheno, pheno)
+    if (!is.null(B)) B <- rbind(B, B)
+  }
+
+  ## filter probes and samples
+  ii <- which(rowMeans(is.na(X)) <= max.na)
+  jj <- 1:ncol(X)
+  if (remove.na && any(is.na(pheno))) {
+    jj <- which(!is.na(pheno))
+    if (verbose > 0) message("[gx.limma] ", sum(is.na(pheno) > 0), " with missing phenotype")
+  }
+  X0 <- X[ii, jj, drop = FALSE]
+  pheno0 <- as.character(pheno[jj])
+  X0 <- X0[!(rownames(X0) %in% c(NA, "", "NA")), ]
+  B0 <- NULL
+  if (!is.null(B)) B0 <- B[jj, , drop = FALSE]
+
+  if (verbose > 0) {
+    message("[gx.limma] X contains ", sum(duplicated(rownames(X))), "duplicated rownames")
+    message("[gx.limma] analyzing ", ncol(X0), " samples")
+    message("[gx.limma] table.pheno: ", table(pheno), "samples")
+    message("[gx.limma] testing ", nrow(X0), " features")
+    message("[gx.limma] lfc = ", lfc)
+    message("[gx.limma] fdr = ", fdr)
+    message("[gx.limma] max.na = ", max.na)
+    if (!is.null(B0)) message("[gx.limma] including ", ncol(B0), " batch covariates")
+  }
+
+  ## auto-detect reference
+  pheno.ref <- c()
+  ref.detected <- FALSE
+  ref <- toupper(ref)
+  is.ref <- (toupper(pheno0) %in% toupper(ref))
+  is.ref2 <- grepl(paste(paste0("^", ref), collapse = "|"), pheno0, ignore.case = TRUE)
+  if (!any(is.ref) && !all(is.ref2)) is.ref <- is.ref2
+  ref.detected <- (sum(is.ref) > 0 && sum(!is.ref) > 0)
+
+  if (ref.detected) {
+    pheno.ref <- unique(pheno0[is.ref])
+    if (verbose > 0) message("[gx.limma] setting reference to y=", pheno.ref, "\n")
+    levels <- c(pheno.ref, sort(setdiff(unique(pheno0), pheno.ref)))
+  } else {
+    if (verbose > 0) message("[gx.limma] WARNING: could not auto-detect reference\n")
+    levels <- as.character(sort(unique(pheno0)))
+    if (verbose > 0) message("[gx.limma] setting reference to first class:", levels[1], "\n")
+  }
+
+  if (length(levels) != 2 & !f.test) {
+    stop("[gx.limma] ERROR: only two class comparisons. Please activate F test using f.test=TRUE\n\n")
+    return(NULL)
+  }
+
+  pheno1 <- stats::relevel(factor(pheno0), ref = levels[1])
+
+  ## setup model and perform LIMMA (method = 1, no contrast matrix)
+  design <- cbind(1, pheno0 == levels[2])
+  colnames(design) <- c("intercept", "main_vs_ref")
+  if (f.test) {
+    design <- stats::model.matrix(~pheno1)
+    colnames(design)[2:ncol(design)] <- paste0(levels(pheno1)[-1], "_vs_", levels(pheno1)[1])
+  }
+  if (!is.null(B0)) {
+    if (verbose > 0) {
+      message("[gx.limma] augmenting design matrix with: ", paste(colnames(B0)), "\n")
+    }
+    sel <- which(colMeans(B0 == 1) < 1) ## take out any constant term
+    design <- cbind(design, B0[, sel, drop = FALSE])
+  }
+  fit <- limma::lmFit(X0, design)
+  fit <- limma::eBayes(fit, trend = trend, robust = robust)
+  coef <- if (f.test) NULL else "main_vs_ref"
+  top <- suppressMessages(limma::topTable(fit, coef = coef, number = nrow(X0), sort.by = "none"))
+
+  if (f.test) {
+    cols <- c("logFC", "AveExpr", "F", "P.Value", "adj.P.Val")
+    kk <- intersect(colnames(top), cols)
+    top <- top[, kk]
+    top$B <- NULL
+  }
+
+  if ("ID" %in% colnames(top)) {
+    rownames(top) <- top$ID
+    top$ID <- NULL
+  }
+
+  if (f.test) {
+    kk <- setdiff(colnames(top), colnames(design))
+    top <- top[, kk, drop = FALSE]
+  }
+
+  top <- top[rownames(X0), , drop = FALSE]
+
+  if (f.test) {
+    ## compute averages
+    avg <- do.call(cbind, tapply(1:ncol(X0), pheno1, function(i) {
+      rowMeans(X0[, i, drop = FALSE], na.rm = TRUE)
+    }))
+    if (!"logFC" %in% colnames(top)) {
+      maxFC <- apply(avg, 1, max, na.rm = TRUE) - apply(avg, 1, min, na.rm = TRUE)
+      top$logFC <- NULL
+      top <- cbind(logFC = maxFC, top)
+      rownames(top) <- rownames(X0)
+    }
+  }
+
+  if (!is.null(fdr) && !is.null(lfc)) {
+    ii <- which(top$adj.P.Val <= fdr & abs(top$logFC) >= lfc)
+    top <- top[ii, ]
+    if (verbose > 0) {
+      message(
+        "[gx.limma] Found ", nrow(top), " significant at fdr = ",
+        fdr, " and minimal FC = ", lfc, "\n"
+      )
+    }
+  }
+
+  if (compute.means && nrow(top) > 0) {
+    if (f.test) {
+      avg <- avg[rownames(top), ]
+    } else {
+      avg <- t(apply(X0[rownames(top), ], 1, function(x) tapply(x, pheno0, mean, na.rm = TRUE)))
+      avg <- avg[, as.character(levels), drop = FALSE]
+    }
+    colnames(avg) <- paste0("AveExpr.", colnames(avg))
+    top <- cbind(top, avg)
+  }
+  top$B <- NULL
+
+  if (is.single) {
+    top$P.Value <- NA
+    top$adj.P.Val <- NA
+    top$t <- NA
+    if (f.test) top$F <- NA
+  }
+
+  if (sort.by == "FC") top <- top[order(abs(top$logFC), decreasing = TRUE), ]
+  if (sort.by == "p") top <- top[order(top$P.Value), ]
+
+  return(top)
 }

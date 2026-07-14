@@ -10,10 +10,7 @@
 #'
 #' @import WGCNA
 #'
-#' @importFrom playbase gx.limma gx.heatmap
-#'   pgx.scatterPlotXY imputeMissing svdImpute2
-#'   normalizeMultiOmics pgx.clusterBigMatrix
-#'
+#' @importFrom limma lmFit eBayes topTable
 #' @importFrom Matrix t crossprod
 #' @importFrom matrixStats rowSds colSds rowMaxs colMaxs
 #' @importFrom irlba irlba
