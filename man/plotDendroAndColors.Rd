@@ -12,6 +12,7 @@ plotDendroAndColors(
   show.traits = FALSE,
   show.contrasts = FALSE,
   show.mat = NULL,
+  show.tom = FALSE,
   clust = TRUE,
   use.tree = 0,
   block = 1,
@@ -20,6 +21,10 @@ plotDendroAndColors(
   nmax = -1,
   marAll = c(0.4, 5, 1, 0.2),
   setLayout = TRUE,
+  cex = 1,
+  layout.ncols = 1,
+  layout.heights = c(0.3, 1, 1),
+  tom.subsample = 400,
   ...
 )
 }
@@ -38,6 +43,8 @@ plotDendroAndColors(
 
 \item{show.mat}{Custom matrix to show.}
 
+\item{show.tom}{Show TOM heatmap below dendrogram.}
+
 \item{clust}{Cluster columns by correlation.}
 
 \item{use.tree}{Tree index for consensus.}
@@ -53,6 +60,14 @@ plotDendroAndColors(
 \item{marAll}{Margin sizes vector.}
 
 \item{setLayout}{Whether to set layout.}
+
+\item{cex}{Character expansion factor for plot.}
+
+\item{layout.ncols}{Number of columns in layout grid.}
+
+\item{layout.heights}{Relative heights of dendrogram, colors, and TOM.}
+
+\item{tom.subsample}{Downsample TOM to this many genes for display.}
 
 \item{...}{Additional arguments to WGCNA::plotDendroAndColors.}
 }

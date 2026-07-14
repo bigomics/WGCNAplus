@@ -12,6 +12,8 @@ plotMultiDendroAndColors(
   show.traits = FALSE,
   show.contrasts = FALSE,
   show.mat = NULL,
+  show.tom = FALSE,
+  tom.subsample = 400,
   clust = TRUE,
   use.tree = 0,
   rm.na = TRUE,
@@ -35,6 +37,10 @@ plotMultiDendroAndColors(
 \item{show.contrasts}{Show contrast correlations.}
 
 \item{show.mat}{Custom matrix to show.}
+
+\item{show.tom}{Show TOM heatmap below dendrogram.}
+
+\item{tom.subsample}{Downsample TOM to this many genes.}
 
 \item{clust}{Cluster columns by correlation.}
 

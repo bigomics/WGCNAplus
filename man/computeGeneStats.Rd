@@ -4,7 +4,7 @@
 \alias{computeGeneStats}
 \title{Compute general feature statistics after WGCNA results.}
 \usage{
-computeGeneStats(net, datExpr, datTraits, TOM)
+computeGeneStats(net, datExpr = NULL, datTraits = NULL, TOM = NULL)
 }
 \arguments{
 \item{net}{WGCNA network object with MEs and colors, or a full wgcna result object.}
