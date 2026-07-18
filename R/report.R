@@ -385,7 +385,7 @@ Layout in TB direction. Do not use any special characters, without headers or fo
 
   aa <- ai.ask(qq, model = ai_model)
 
-  ## cleanup a little bit
+  ## cleanup
   aa <- gsub("```","",aa)
   diagram <- gsub("mermaid\n|dot\n","",aa)
   diagram <- gsub("&","and",diagram)
@@ -409,7 +409,7 @@ Layout in TB direction. Do not use any special characters, without headers or fo
       }
     }
   }
-  diagram
+  return(diagram)
 }
 
 
@@ -433,10 +433,15 @@ create_infographic <- function(report,
 
   prompt <- paste(prompt, "\nCreate a graphical abstract according to the given diagram and information in the WGCNA report. Use scientific visual style like Nature journals. Illustrate biological concepts with small graphics. \n\n", report, "\n---------------\n\n", diagram)
 
-  outfile <- try(ai.create_image_gemini(
-    prompt = prompt,  model = model,
-    format = "file", filename = filename,
-    api_key = api_key))
+  outfile <- try(
+    ai.create_image_gemini(
+      prompt = prompt,
+      model = model,
+      format = "file",
+      filename = filename,
+      api_key = api_key
+    )
+  )
 
   if (inherits(outfile,"try-error")) return(NULL)
 
@@ -466,7 +471,13 @@ create_module_infographic <- function(rpt,
   mm <- paste0("**", module, "**: ", rpt$summaries[[module]])
 
   prompt <- paste(prompt, "Create an infographic summarizing the biological narrative of the following WGCNA module. Use scientific visual style like Nature journals. Illustrate biological concepts with small graphics. Match the background with the name of the module with a very light shade. Include the module name in the title or image. \n\n", mm)
-  outfile <- ai.create_image_gemini(prompt, model, filename = filename, api_key = api_key)
+
+  outfile <- ai.create_image_gemini(
+    prompt,
+    model,
+    filename = filename,
+    api_key = api_key
+  )
   message("saving to ", outfile)
 
   return(invisible(outfile))
