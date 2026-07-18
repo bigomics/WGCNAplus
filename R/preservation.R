@@ -32,14 +32,9 @@ runPreservationWGCNA <- function(exprList,
                                  ai_model = "",
                                  summary = FALSE) {
 
-  if (is.character(reference)) {
-    reference <- match(reference, names(exprList))
-  }
-
+  if (is.character(reference)) reference <- match(reference, names(exprList))
   reference.name <- "Consensus"
-  if (reference > 0) {
-    reference.name <- names(exprList)[reference]
-  }
+  if (reference > 0) reference.name <- names(exprList)[reference]
   
   ## multiset WGCNA
   pres <- runConsensusWGCNA(

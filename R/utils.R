@@ -1946,3 +1946,42 @@ gx.limma <- function(X,
 
   return(top)
 }
+
+#' Merge multiple ME matrices into one. Allow different dimensions.
+#' @param mlist List of ME matrices.
+#' @param me2 Optional second ME matrix.
+#' @param prefix Prefix columns with list names.
+#' @return Merged eigengene matrix.
+#' @keywords internal
+mergeME <- function(mlist,
+                    me2 = NULL,
+                    prefix = FALSE) {
+
+  if (!is.null(me2) && !inherits(mlist,"list")) mlist <- list(mlist, me2)
+
+  all.samples <- unique(unlist(sapply(mlist, rownames, simplify=FALSE)))
+
+  if (prefix) {
+    for (i in 1:length(mlist)) {
+      colnames(mlist[[i]]) <- paste0(names(mlist)[i],":",colnames(mlist[[i]]))
+    }
+  }
+
+  is.mat <- all(sapply(mlist, inherits, what="matrix"))
+  all.me <- unique(unlist(sapply(mlist, colnames, simplify=FALSE)))
+
+  M <- as.data.frame(matrix(NA, nrow = length(all.samples), ncol = length(all.me)))
+  rownames(M) <- all.samples
+  colnames(M) <- all.me
+
+  for (i in 1:length(mlist)) {
+    ii <- match(rownames(mlist[[i]]), rownames(M))
+    jj <- match(colnames(mlist[[i]]), colnames(M))
+    M[ii, jj] <- mlist[[i]]
+  }
+
+  if (is.mat) M <- as.matrix(M)
+
+  return(M)
+
+}
