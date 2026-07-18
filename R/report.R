@@ -274,51 +274,6 @@ describeModules <- function(wgcna,
 
 }
 
-#' Get top correlated modules
-#' @param wgcna A WGCNA result object.
-#' @param topratio Ratio threshold for top selection.
-#' @param kx Power exponent for ranking.
-#' @param rm.grey Remove grey module.
-#' @param multi Use multi-omics mode.
-#' @return Character vector of top module names.
-#' @export
-getTopModules <- function(wgcna,
-                          topratio = 0.85,
-                          kx = 4,
-                          rm.grey = TRUE,
-                          multi = FALSE) {
-
-  if (!multi) {
-    ww <- list(gx = wgcna)  ## single-omics wgcna object
-  } else if(!is.null(wgcna$layers)) {
-    ww <- wgcna$layers
-  } else {
-    ww <- wgcna
-  }
-
-  M <- list()
-  for (i in 1:length(ww)) {
-    me <- ww[[i]]$net$MEs
-    dt <- ww[[i]]$datTraits
-    M[[i]] <- cor(me, dt, use="pairwise")
-  }
-
-  top.modules <- c()
-  for (i in 1:length(M)) {
-    mx <- rowMeans(abs(M[[i]]**kx),na.rm=TRUE)**(1/kx)
-    tt <- names(which( mx > topratio * max(mx)))
-    top.modules <- c(top.modules, tt)
-  }
-
-  if (rm.grey) {
-    sel.grey <- grepl("[A-Z]{2}grey$",top.modules)
-    top.modules <- top.modules[!sel.grey]
-  }
-  
-  return(top.modules)
-
-}
-
 #' Correct common DOT diagram issues
 #' @param diagram DOT diagram string.
 #' @return Corrected DOT diagram string.
