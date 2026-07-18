@@ -43,20 +43,16 @@ create_report <- function(wgcna,
   ## get top modules (most correlated with some phenotype)
   top.modules <- getTopModules(layers, topratio = topratio, kx = 4, multi = TRUE)
 
-  if (is.null(annot) && !is.null(layers[[1]]$annot)) {
-    annot <- layers[[1]]$annot
-  }
-
-  if (is.null(annot)) {
-    message("[create_report] WARNING. providing user annot table is recommended.")
-  }
+  if (is.null(annot) && !is.null(layers[[1]]$annot)) annot <- layers[[1]]$annot
+  
+  if (is.null(annot)) message("[create_report] No annot supplied. This is recommended.")
 
   ## Step 1. Describe modules with LLM. We can use one LLM model or more.
   if (verbose) message("Extracting top modules...")
   out <- describeModules(
     layers,
     modules = top.modules,
-    ntop = ntop,  ## number of top genes or sets
+    ntop = ntop,
     annot = annot,
     psig = psig,
     experiment = wgcna$experiment,
@@ -87,8 +83,7 @@ create_report <- function(wgcna,
 
   ## addd compute setttings
   if (!is.null(wgcna$settings)) {
-    settings <- paste0(names(wgcna$settings),'=',wgcna$settings,collapse='; ')
-    results[['compute_settings']] <- settings
+    results[['compute_settings']] <- paste0(names(wgcna$settings),'=',wgcna$settings,collapse='; ')
   }
 
   ## collate all results
@@ -113,14 +108,8 @@ Format like a scientific article, use prose as much as possible, minimize the us
     pp <- paste("You are a biologist interpreting results from a WGCNA analysis for this experiment:",  xx, ".\n\n")
     qq <- paste(pp, qq)
 
-    if (format == "markdown") {
-      qq <- paste(qq, "Format text and sections as markdown.")
-    }
-
-    if (tolower(format) == "html") {
-      qq <- paste(qq, "Format text and sections as HTML.")
-    }
-
+    if (format == "markdown") qq <- paste(qq, "Format text and sections as markdown.")
+    if (tolower(format) == "html") qq <- paste(qq, "Format text and sections as HTML.")
     qq <- paste(qq, "\n\nnHere are the results: <results>",all.results,"\n</results>")
 
     ## Ask LLM
@@ -133,15 +122,18 @@ Format like a scientific article, use prose as much as possible, minimize the us
 
   }
 
-  list(
-    descriptions_prompts = descriptions_prompts,
-    descriptions = descriptions,
-    summaries_prompts = summaries_prompts,
-    summaries = summaries,
-    report_prompt = qq,
-    report = report,
-    diagram = diagram
+  return(
+    list(
+      descriptions_prompts = descriptions_prompts,
+      descriptions = descriptions,
+      summaries_prompts = summaries_prompts,
+      summaries = summaries,
+      report_prompt = qq,
+      report = report,
+      diagram = diagram
+    )
   )
+
 }
 
 #' Get multi-dataset top genes and sets tables
