@@ -56,7 +56,6 @@ create_report <- function(wgcna,
   out <- describeModules(
     layers,
     modules = top.modules,
-    multi = TRUE,  ## always true (we use list)
     ntop = ntop,  ## number of top genes or sets
     annot = annot,
     psig = psig,
@@ -370,7 +369,6 @@ getTopGenesAndSets <- function(wgcna,
 #' @param ntop Number of top entries.
 #' @param psig P-value significance threshold.
 #' @param annot Annotation table or NULL.
-#' @param multi Use multi-omics mode.
 #' @param modules Module names to describe.
 #' @param experiment Experiment description string.
 #' @param verbose Verbosity level.
@@ -384,7 +382,6 @@ describeModules <- function(wgcna,
                             ntop = 50,
                             psig = 0.05,
                             annot = NULL,
-                            multi = FALSE,
                             modules = NULL,
                             experiment = "",
                             verbose = 1, 

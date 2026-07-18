@@ -228,7 +228,6 @@ runConsensusWGCNA <- function(exprList,
     message("Annotating modules using ", ai_model)
     ai <- describeModules(
       res,
-      multi = FALSE,
       ntop = 50,
       model = ai_model,
       annot = annot,
