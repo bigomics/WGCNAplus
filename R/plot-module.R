@@ -13,16 +13,18 @@
 #' @param cex Character expansion factor.
 #' @return NULL (invisible). Generates a plot.
 #' @export
-plotModuleScores <- function(res, trait, nmax = 16, ##multi = FALSE, 
-                             collapse = FALSE, setpar = TRUE, cex = 1) {
+plotModuleScores <- function(res,
+                             trait,
+                             nmax = 16,
+                             collapse = FALSE,
+                             setpar = TRUE,
+                             cex = 1) {
 
-  ## is this concensus object
   if(is.null(res$class)) res$class <- NA
   multi <- (!is.null(res$layers) || res$class %in% c("consensus"))
   if(!is.null(res$net)) multi <- multi && !is.null(res$net$multiMEs)
   
   if (multi) {
-    ## --- multi-dataset path ---
     if (!"MEs" %in% names(res)) {
       res$MEs <- lapply(res$net$multiMEs, function(m) m$data)
     }
@@ -35,7 +37,6 @@ plotModuleScores <- function(res, trait, nmax = 16, ##multi = FALSE,
     names(batch) <- rownames(Y)
     nbatch <- length(res$MEs)
   } else {
-    ## --- single-dataset path ---
     MEx <- res$net$MEs
     Y <- res$datTrait
     kk <- intersect(rownames(MEx), rownames(Y))
@@ -60,6 +61,10 @@ plotModuleScores <- function(res, trait, nmax = 16, ##multi = FALSE,
   }
 
   n <- length(sel.modules)
+  if (n == 0) {
+    message("[WGCNAplus::plotModuleScores] WARNING: no modules correlated with trait ", trait, ". Nothing to plot.")
+    return(invisible(NULL))
+  }
   nr <- ceiling(sqrt(n))
   nc <- ceiling(n / nr)
   mar <- if (multi) c(2.5, 4, 2.5, 1) else c(4, 4, 2.5, 1)
