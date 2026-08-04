@@ -69,8 +69,8 @@ runPreservationWGCNA <- function(exprList,
     message("[runPreservationWGCNA] adding merged layer...")
     cX <- lapply(exprList, function(x) x - rowMeans(x))
     merged <- do.call(cbind, cX)
-    exprList$Merged <- NULL
-    exprList <- c(list(Merged = merged), exprList)
+    exprList$Consensus <- NULL
+    exprList <- c(list(Consensus = merged), exprList)
     cons.colors <- pres$net$colors
     colorList <- c(list(Consensus = cons.colors), colorList)
     reference <- reference + 1
@@ -117,9 +117,9 @@ runPreservationWGCNA <- function(exprList,
 
   ## Compute module-trait correlation matrices
   Y <- lapply(pres$layers, function(w) w$datTraits)
-  if ("Merged" %in% names(MEx) && !"Merged" %in% names(Y)) {
-    kk <- rownames(MEx[["Merged"]])
-    Y[["Merged"]] <- pres$datTraits[kk, ]
+  if ("Consensus" %in% names(MEx) && !"Consensus" %in% names(Y)) {
+    kk <- rownames(MEx[["Consensus"]])
+    Y[["Consensus"]] <- pres$datTraits[kk, ]
     Y <- Y[names(MEx)]
   }
 
