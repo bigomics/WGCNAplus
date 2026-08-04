@@ -491,7 +491,7 @@ computeModules <- function(datExpr,
   if (numericLabels) {
     if (verbose > 0) message("Renaming to numeric labels")
     colorOrder <- names(sort(table(colors), decreasing = TRUE))
-    colorOrder <- unique(c("grey", colorOrder))
+    colorOrder <- unique(c("grey", colorOrder, unmergedColors))
     colors <- match(colors, colorOrder) - 1
     unmergedColors <- match(unmergedColors, colorOrder) - 1
     mecolor <- sub("^ME", "", names(MEs))
@@ -500,7 +500,7 @@ computeModules <- function(datExpr,
     # Rename to standard colors, most frequent first
     if (verbose > 0) message("Renaming to standard colors")
     colorOrder <- names(sort(table(colors), decreasing = TRUE))
-    colorOrder <- unique(c("grey", colorOrder))
+    colorOrder <- unique(c("grey", colorOrder, unmergedColors))
     newcolor <- setdiff(WGCNA::standardColors(), "grey")
     n0 <- length(colorOrder)
     n1 <- length(newcolor)
