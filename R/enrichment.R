@@ -252,7 +252,7 @@ run_enrichment_methods <- function(ME,
     }
 
     ## handle infinite or NA
-    rho[is.infinite(rho)] <- 2 * max(rho, na.rm = TRUE) ## Inf odd.ratio
+    rho[is.infinite(rho)] <- 2 * max(rho[is.finite(rho)], na.rm = TRUE) ## Inf odd.ratio
     pval[is.na(pval)] <- 1
     rho[is.na(rho)] <- 0
     
