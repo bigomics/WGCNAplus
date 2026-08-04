@@ -449,6 +449,10 @@ getModuleCrossGenes <-  function(wgcna,
     MEx <- MEx[,modules,drop=FALSE]
   }
 
+  kk <- intersect(rownames(geneX), rownames(MEx))
+  geneX <- geneX[kk, , drop = FALSE]
+  MEx <- MEx[kk, , drop = FALSE]
+
   nbx.cor <- cor(geneX, MEx)
 
   nbx.list <- list()
