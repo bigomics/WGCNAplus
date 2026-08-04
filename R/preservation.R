@@ -129,10 +129,11 @@ runPreservationWGCNA <- function(exprList,
 
   R <- mapply(cor, MEx, Y, use = "pairwise", SIMPLIFY = FALSE)
 
+  ref <- reference.name
+
   ## gene statistics of reference layer
   if (compute.stats) {
     message("[runPreservationWGCNA] computing gene statistics...")
-    ref <- reference.name
     wnet <- list(MEs = MEx[[ref]], colors = pres$colors[, ref])
     pres$stats <- computeGeneStats(wnet, pres$datExpr[[ref]], pres$datTraits, TOM = NULL)
   }
