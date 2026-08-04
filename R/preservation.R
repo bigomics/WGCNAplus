@@ -119,7 +119,7 @@ runPreservationWGCNA <- function(exprList,
   Y <- lapply(pres$layers, function(w) w$datTraits)
   if ("Consensus" %in% names(MEx) && !"Consensus" %in% names(Y)) {
     kk <- rownames(MEx[["Consensus"]])
-    Y[["Consensus"]] <- pres$datTraits[kk, ]
+    Y[["Consensus"]] <- pres$datTraits[kk, , drop = FALSE]
     Y <- Y[names(MEx)]
   }
 

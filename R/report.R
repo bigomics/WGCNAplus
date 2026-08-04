@@ -260,7 +260,7 @@ describeModules <- function(wgcna,
     for (m in model) {
       if (verbose > 0) message("  ...asking LLM model ", m)
       a <- try(ai.ask(q, model = m), silent = TRUE)
-      if (inherits(a, "try-error")) {
+      if (inherits(a, "try-error") || is.null(a) || !nzchar(a)) {
         message("WARNING: LLM request to model ", m, " failed. Falling back to template summary.")
         a <- ""
         if (nzchar(pp)) a <- paste0(a, "**Correlated phenotypes**: ", pp, "\n\n")
