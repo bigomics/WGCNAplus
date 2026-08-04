@@ -560,6 +560,7 @@ gset.fisher <- function(genes,
 
 }
 
+#' Perform Fisher's exact test on gene sets, returning per-geneset results as a list
 #' @export
 gset.fisherLIST <- function(genes,
                             genesets,

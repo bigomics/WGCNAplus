@@ -1216,6 +1216,7 @@ mat2gmt <- function(mat) {
 
 }
 
+#' List available local Ollama models
 #' @export
 ai.get_ollama_models <- function(models = NULL,
                                  size = NULL) {
@@ -1250,6 +1251,7 @@ ai.get_ollama_models <- function(models = NULL,
 
 }
 
+#' Ask an LLM a question, dispatching to the configured engine
 #' @export
 ai.ask <- function(question,
                    model,
@@ -1270,6 +1272,7 @@ ai.ask <- function(question,
 
 }
 
+#' Ask an LLM a question using the ellmer package
 #' @export
 ai.ask_ellmer <- function(question,
                           model = DEFAULT_LLM,
@@ -1315,6 +1318,7 @@ ai.ask_ellmer <- function(question,
 
 }
 
+#' Ask an LLM a question using the tidyprompt package
 #' @export
 ai.ask_tidyprompt <- function(question,
                               model,
