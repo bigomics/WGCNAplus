@@ -45,7 +45,8 @@ Suggests:
     base64enc,
     ellmer,
     tidyprompt,
-    dplyr
+    dplyr,
+    corpora
 Remotes:
     playdata=url::https://github.com/bigomics/playdata/archive/HEAD.zip,
     plaid=url::https://github.com/bigomics/plaid/archive/HEAD.zip
