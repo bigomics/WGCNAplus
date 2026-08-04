@@ -75,7 +75,6 @@ mem.proc <- function(digits = 0) {
 #' @keywords internal
 info <- function(..., type = "INFO") {
   dd <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
-  msg <- "some message"
   msg <- sapply(list(...), paste, collapse = " ")
   dd <- paste0("[", dd, "]")
   mm <- paste0("[", mem.proc(), "/", mem.vmrss(), "]")

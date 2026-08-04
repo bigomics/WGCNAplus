@@ -16,18 +16,18 @@ test_that("labels2colors handles non-standard labels", {
 })
 
 test_that("purpleGreyYellow returns correct number of colors", {
-  cols <- WGCNAplus:::purpleGreyYellow(5)
+  cols <- WGCNAplus::purpleGreyYellow(5)
   expect_length(cols, 5)
   expect_true(all(grepl("^#", cols)))
 })
 
 test_that("rho2bluered handles vector input", {
-  cols <- WGCNAplus:::rho2bluered(c(-1, 0, 1), f = 1)
+  cols <- WGCNAplus::rho2bluered(c(-1, 0, 1), f = 1)
   expect_length(cols, 3)
 })
 
 test_that("rho2bluered handles matrix input", {
   R <- matrix(c(-1, 0, 0, 1), nrow = 2)
-  cols <- WGCNAplus:::rho2bluered(R)
+  cols <- WGCNAplus::rho2bluered(R)
   expect_equal(dim(cols), dim(R))
 })
