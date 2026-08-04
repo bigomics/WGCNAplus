@@ -37,7 +37,15 @@ Suggests:
     DiagrammeR,
     DiagrammeRsvg,
     SuperCell,
-    lasagna
+    lasagna,
+    httr,
+    jsonlite,
+    glue,
+    assertthat,
+    base64enc,
+    ellmer,
+    tidyprompt,
+    dplyr
 Remotes:
     playdata=url::https://github.com/bigomics/playdata/archive/HEAD.zip,
     plaid=url::https://github.com/bigomics/playdata/archive/HEAD.zip

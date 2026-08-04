@@ -1399,8 +1399,11 @@ ai.create_image_gemini <- function(prompt,
   assertthat::assert_that(assertthat::is.string(prompt), assertthat::noNA(prompt))
   assertthat::assert_that(assertthat::is.string(model), assertthat::noNA(model))
   assertthat::assert_that(assertthat::is.string(api_key), assertthat::noNA(api_key))
-  require(dplyr)
-  
+  if (!requireNamespace("dplyr", quietly = TRUE)) {
+    stop("Package 'dplyr' is required for ai.create_image_gemini()")
+  }
+  `%>%` <- dplyr::`%>%`
+
   if (nchar(api_key) == 0) {
     stop("GEMINI_API_KEY environment variable is not set", call. = FALSE)
   }
@@ -1507,6 +1510,11 @@ ai.create_image_openai <- function (prompt,
   if (!is.null(organization)) {
     assertthat::assert_that(assertthat::is.string(organization), assertthat::noNA(organization))
   }
+
+  if (!requireNamespace("dplyr", quietly = TRUE)) {
+    stop("Package 'dplyr' is required for ai.create_image_openai()")
+  }
+  `%>%` <- dplyr::`%>%`
 
   model <- sub("^openai:", "", model)
   
