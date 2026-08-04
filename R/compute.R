@@ -325,7 +325,10 @@ computeWGCNA <- function(X,
     cutMethod <- "static"
   }
 
-  if (treeCut > 1) cutMethod <- "static"
+  if (treeCut > 1 && cutMethod != "static") {
+    message("WARNING: treeCut > 1. Changing to static cutting")
+    cutMethod <- "static"
+  }
   if (treeCut <= 1) {
     ## transform from relative to actual
     qq <- quantile(geneTree$height, probs = c(0.05, treeCutCeiling))
