@@ -213,10 +213,14 @@ plotLabeledCorrelationHeatmap <- function(R,
   }
 
   R0 <- pmax(pmin(R, 1, na.rm=TRUE), -1, na.rm=TRUE)
-  ii <- which(nSamples < 3)
+  low.n <- nSamples < 3
   nSamples <- pmax(nSamples, 3)
   Pvalue <- WGCNA::corPvalueStudent(R0, nSamples)
-  if (is.matrix(nSamples) && length(ii)>0) { Pvalue[ii] <- NA }
+  if (is.matrix(low.n)) {
+    if (any(low.n)) Pvalue[which(low.n)] <- NA
+  } else if (isTRUE(low.n)) {
+    Pvalue[] <- NA
+  }
 
   if (justdata) return(R)
 
