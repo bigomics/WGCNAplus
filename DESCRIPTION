@@ -28,6 +28,7 @@ Imports:
     methods
 Suggests:
     testthat (>= 3.0.0),
+    remotes,
     playdata,
     plaid,
     plotly,
@@ -49,7 +50,8 @@ Suggests:
     corpora
 Remotes:
     playdata=url::https://github.com/bigomics/playdata/archive/HEAD.zip,
-    plaid=url::https://github.com/bigomics/plaid/archive/HEAD.zip
+    bigomics/plaid,
+    bigomics/lasagna
 Config/testthat/edition: 3
 Config/roxygen2/version: 8.0.0
 RoxygenNote: 7.3.3
