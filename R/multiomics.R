@@ -78,6 +78,9 @@ computeWGCNA_multiomics <- function(dataX,
     if (length(kk) == 0) {
       message("[computeWGCNA_multiomics] X and GMT do not share features")
     } else {
+      if (!requireNamespace("plaid", quietly = TRUE)) {
+        stop("Package 'plaid' is required for gene-set score computation")
+      }
       dataX$gs <- plaid::plaid(X[kk,], GMT[kk,])
     }
   }

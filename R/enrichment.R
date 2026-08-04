@@ -137,6 +137,9 @@ run_enrichment_methods <- function(ME,
   sel <- which(Matrix::colSums(GMT!=0) >= min.genes)
   GMT <- GMT[, sel]
 
+  if (!requireNamespace("plaid", quietly = TRUE)) {
+    stop("Package 'plaid' is required for gene-set enrichment computation")
+  }
   gsetX <- plaid::plaid(geneX, matG=GMT)
   message("Computing enrichment for ", nrow(gsetX), " genesets")
 
