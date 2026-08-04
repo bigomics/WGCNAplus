@@ -122,7 +122,7 @@ plotModuleTraitHeatmap <- function(wgcna,
   MEs <- mergeME(MEs)
 
   Y <- layers[[1]]$datTraits
-  sel <- 1:ncol(Y)
+  sel <- seq_len(ncol(Y))
   if (show == "traits") sel <- grep("_vs_",colnames(Y),invert=TRUE)
   if (show == "contrasts") sel <- grep("_vs_",colnames(Y))
   Y <- Y[, sel, drop = FALSE]

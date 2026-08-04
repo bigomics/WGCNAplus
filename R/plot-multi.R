@@ -212,7 +212,7 @@ plotPreservationModuleTraits <- function(pres,
     cval <- seq(-clim, clim, length.out = 201)
     ii <- which(cval >= min(consZ, na.rm = TRUE) & cval <= max(consZ, na.rm = TRUE))
     col2 <- WGCNA::blueWhiteRed(201)[ii]
-    jj <- 1:ncol(consZ)
+    jj <- seq_len(ncol(consZ))
     if (rm.na) jj <- validcol(consZ)
     WGCNA::labeledHeatmap(
       Matrix = consZ[, jj, drop = FALSE],
@@ -237,7 +237,7 @@ plotPreservationModuleTraits <- function(pres,
     ii <- which(cval >= min(consW, na.rm = TRUE) & cval <= max(consW, na.rm = TRUE))
     col2 <- WGCNA::blueWhiteRed(201)[ii]
 
-    jj <- 1:ncol(consW)
+    jj <- seq_len(ncol(consW))
     if (rm.na) jj <- validcol(consW)
     WGCNA::labeledHeatmap(
       Matrix = consW[, jj, drop = FALSE],

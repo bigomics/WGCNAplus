@@ -168,7 +168,7 @@ plotEigenGeneAdjacencyHeatmap <- function(wgcna,
   ## Repeat 'power' times for higher order adjacency.
   power <- round(power)
   R <- ME
-  for (i in 1:power) {
+  for (i in seq_len(power)) {
     tt <- cortest(R, R)
     R <- tt$rho
     nSamples <- tt$n
