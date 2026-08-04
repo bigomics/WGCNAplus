@@ -402,6 +402,12 @@ getConsensusGeneStats <- function(cons,
     )
   }
 
+  missing.layers <- names(gstats)[sapply(gstats, is.null)]
+  if (length(missing.layers)) {
+    stop("[getConsensusGeneStats] trait '", trait, "' not found in layer(s): ",
+         paste(missing.layers, collapse = ", "))
+  }
+
   ## Align rows
   ff <- gstats[[1]]$feature
   for (k in names(gstats)) {
