@@ -21,27 +21,19 @@ plotConsensusOverlapHeatmap <- function(net1, net2,
     layout.matrix <- matrix(c(1, 2, 5, 3, 4, 5), nrow = 3, ncol = 2)
     layout(mat = layout.matrix, heights = c(0.8, 0.2, 2.5), widths = c(1, 1))
 
-    WGCNA::plotDendroAndColors(
-      dendro = net1$dendrograms[[1]],
-      colors = net1$colors,
-      dendroLabels = FALSE,
-      hang = 0.03,
-      addGuide = FALSE,
-      guideHang = 0.05,
-      setLayout = FALSE,
-      main = setLabels[1]
-    )
-
-    WGCNA::plotDendroAndColors(
-      dendro = net2$dendrograms[[1]],
-      colors = net2$colors,
-      dendroLabels = FALSE,
-      hang = 0.03,
-      addGuide = FALSE,
-      guideHang = 0.05,
-      setLayout = FALSE,
-      main = setLabels[2]
-    )
+    nets <- list(net1, net2)
+    for (i in 1:2) {
+      WGCNA::plotDendroAndColors(
+        dendro = nets[[i]]$dendrograms[[1]],
+        colors = nets[[i]]$colors,
+        dendroLabels = FALSE,
+        hang = 0.03,
+        addGuide = FALSE,
+        guideHang = 0.05,
+        setLayout = FALSE,
+        main = setLabels[i]
+      )
+    }
 
   }
 
