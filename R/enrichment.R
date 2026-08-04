@@ -130,12 +130,12 @@ run_enrichment_methods <- function(ME,
   pval.list <- list()
 
   bg <- intersect(rownames(GMT), rownames(geneX))
-  GMT <- GMT[bg, ]
-  geneX <- geneX[bg, ]
+  GMT <- GMT[bg, , drop = FALSE]
+  geneX <- geneX[bg, , drop = FALSE]
 
   ## select on minimum genes
   sel <- which(Matrix::colSums(GMT!=0) >= min.genes)
-  GMT <- GMT[, sel]
+  GMT <- GMT[, sel, drop = FALSE]
 
   if (!requireNamespace("plaid", quietly = TRUE)) {
     stop("Package 'plaid' is required for gene-set enrichment computation")
