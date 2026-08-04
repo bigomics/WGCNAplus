@@ -47,7 +47,8 @@ create_report <- function(wgcna,
   
   if (is.null(annot)) message("[create_report] No annot supplied. This is recommended.")
 
-  ## Step 1. Describe modules with LLM. We can use one LLM model or more.
+  ## Step 1. Extract template descriptions for top modules (no LLM call
+  ## here - model="" - the per-module LLM description happens in Step 2).
   if (verbose) message("Extracting top modules...")
   out <- describeModules(
     layers,
