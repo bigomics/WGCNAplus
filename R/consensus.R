@@ -440,7 +440,7 @@ getModuleCrossGenes <-  function(wgcna,
   W <- wgcna[[ref]]
   geneX <- W$datExpr
 
-  MEx <- sapply(wgcna, function(w) as.matrix(w$net$MEs))
+  MEx <- lapply(wgcna, function(w) as.matrix(w$net$MEs))
   MEx <- do.call(cbind, MEx)
 
   if (!is.null(modules)) {
