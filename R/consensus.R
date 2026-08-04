@@ -291,7 +291,8 @@ createConsensusLayers <- function(exprList,
   multiExpr <- WGCNA::list2multiData(lapply(exprList, Matrix::t))
 
   ## determine power vector
-  if (is.null(power) || any(is.na(power))) power <- "sft"
+  nw <- length(exprList)
+  if (is.null(power)) power <- "sft"
   if (as.character(power[1]) %in% c("sft", "iqr")) {
     ## Estimate best power
     power <- power[1]
@@ -309,8 +310,20 @@ createConsensusLayers <- function(exprList,
     power <- ifelse(is.na(est.power), 12, est.power)
   } else {
     power <- as.numeric(power)
+    power <- head(rep(power, nw), nw)
+    if (any(is.na(power))) {
+      message("[createConsensusLayers] estimating power for ", sum(is.na(power)), " layer(s) missing an explicit value")
+      for (i in which(is.na(power))) {
+        p <- pickSoftThreshold(
+          Matrix::t(exprList[[i]]),
+          sft = NULL, rcut = 0.85, powers = NULL,
+          method = "sft", nmax = 1000, verbose = 0
+        )
+        if (length(p) == 0 || is.null(p)) p <- NA
+        power[i] <- ifelse(is.na(p), 12, p)
+      }
+    }
   }
-  nw <- length(exprList)
   power <- head(rep(power, nw), nw)
   names(power) <- names(exprList)
 
