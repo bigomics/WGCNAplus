@@ -90,14 +90,17 @@ runPreservationWGCNA <- function(exprList,
   )
 
   ## Zsummary tables
+  ## do.call(cbind, lapply(...)) instead of sapply(): sapply collapses to a
+  ## plain vector (no dimensions) when mp.tables has length 1, which breaks
+  ## the rownames()/colnames() assignment below.
   mp.tables <- mp$preservation$Z[[1]][-reference]
-  Z <- sapply(mp.tables, function(mat) mat[, "Zsummary.pres"])
+  Z <- do.call(cbind, lapply(mp.tables, function(mat) mat[, "Zsummary.pres"]))
   rownames(Z) <- paste0("ME", rownames(mp.tables[[1]]))
   colnames(Z) <- names(multiExpr)[-reference]
 
   ## median rank
   mp.tables <- mp$preservation$observed[[1]][-reference]
-  M <- sapply(mp.tables, function(mat) mat[, "medianRank.pres"])
+  M <- do.call(cbind, lapply(mp.tables, function(mat) mat[, "medianRank.pres"]))
   rownames(M) <- paste0("ME", rownames(mp.tables[[1]]))
   colnames(M) <- names(multiExpr)[-reference]
 
