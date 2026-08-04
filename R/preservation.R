@@ -125,10 +125,10 @@ runPreservationWGCNA <- function(exprList,
 
   kk <- Reduce(union, lapply(Y, colnames))
   Y <- lapply(Y, function(y) {
-    y2 <- y[, intersect(kk, colnames(y)), drop = FALSE]
-    missing <- setdiff(kk, colnames(y2))
-    for (m in missing) y2[[m]] <- NA
-    y2[, kk, drop = FALSE]
+    y2 <- matrix(NA_real_, nrow(y), length(kk), dimnames = list(rownames(y), kk))
+    shared <- intersect(kk, colnames(y))
+    y2[, shared] <- y[, shared, drop = FALSE]
+    y2
   })
 
   R <- mapply(cor, MEx, Y, use = "pairwise", SIMPLIFY = FALSE)
