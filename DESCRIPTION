@@ -36,7 +36,8 @@ Suggests:
     uwot,
     DiagrammeR,
     DiagrammeRsvg,
-    SuperCell
+    SuperCell,
+    lasagna
 Remotes:
     playdata=url::https://github.com/bigomics/playdata/archive/HEAD.zip,
     plaid=url::https://github.com/bigomics/playdata/archive/HEAD.zip

@@ -225,6 +225,10 @@ computeWGCNA_multiomics <- function(dataX,
 
   message("[computeWGCNA_multiomics] Creating LASAGNA model and graph ...")
 
+  if (!requireNamespace("lasagna", quietly = TRUE)) {
+    stop("Package 'lasagna' is required for multi-omics graph construction in computeWGCNA_multiomics()")
+  }
+
   lasagna.model <- lasagna::create_model(
     gdata,
     meta.type = "expanded",
