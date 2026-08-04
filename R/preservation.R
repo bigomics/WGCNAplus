@@ -124,8 +124,12 @@ runPreservationWGCNA <- function(exprList,
   }
 
   kk <- Reduce(union, lapply(Y, colnames))
-  Y <- lapply(Y, function(y) y[, match(kk, colnames(y)), drop = FALSE])
-  for (i in 1:length(Y)) colnames(Y[[i]]) <- kk
+  Y <- lapply(Y, function(y) {
+    y2 <- y[, intersect(kk, colnames(y)), drop = FALSE]
+    missing <- setdiff(kk, colnames(y2))
+    for (m in missing) y2[[m]] <- NA
+    y2[, kk, drop = FALSE]
+  })
 
   R <- mapply(cor, MEx, Y, use = "pairwise", SIMPLIFY = FALSE)
 
