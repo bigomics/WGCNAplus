@@ -72,12 +72,12 @@ plotDendroAndColors <- function(wgcna,
 
   if (is.null(gg) && !is.null(block)) {
     ii <- which(net$blocks == block & net$goodGenes == TRUE)
-    gg <- names(net$color)[ii]
+    gg <- names(net$colors)[ii]
   }
 
   if (is.null(gg) && is.null(block)) {
     ii <- which(net$goodGenes == TRUE)
-    gg <- names(net$color)[ii]
+    gg <- names(net$colors)[ii]
   }
 
   colors <- colors[match(gg, rownames(colors)), , drop = FALSE]

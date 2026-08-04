@@ -43,7 +43,7 @@ plotTOM <- function(wgcna,
     if (is.null(block)) block <- 1
     geneTree <- wgcna$net$dendrograms[[block]]
     ii <- which(wgcna$net$blocks == block & wgcna$net$goodGenes == TRUE)
-    gg <- names(wgcna$net$color)[ii]
+    gg <- names(wgcna$net$colors)[ii]
     dissTOM <- dissTOM[gg, gg]
     moduleColors <- labels2colors(wgcna$net$colors[gg])
   }
