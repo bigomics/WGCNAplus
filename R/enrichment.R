@@ -201,7 +201,7 @@ run_enrichment_methods <- function(ME,
 
   gmt <- mat2gmt(GMT)
 
-  Pmin <- sapply(pval.list, function(P) apply(P, 1, min))
+  Pmin <- do.call(cbind, lapply(pval.list, function(P) apply(P, 1, min)))
   sel <- head(order(rowMeans(apply(Pmin, 2, rank))), 5 * ntop)
   message("[run_enrichment_methods] preselecting ", length(sel), " sets for fgsea/Fisher test")
   sel <- rownames(Pmin)[sel]
