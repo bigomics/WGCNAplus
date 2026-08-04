@@ -3,17 +3,16 @@
 ##-----------------------
 library(devtools)
 load_all()
-setwd("vignettes/")
 
-X <- read.csv("./data/liver/expression.csv", row.names = 1)
-samples <- read.csv("./data/liver/samples.csv", row.names = 1)
-contrasts <- read.csv("./data/liver/contrasts.csv", row.names = 1)
-annot <- read.csv("./data/liver/annot.csv", row.names = 1)
-GMT <- readRDS("./data/liver/gmt.RDS")
+X <- read.csv("vignettes/data/liver/expression.csv", row.names = 1)
+samples <- read.csv("vignettes/data/liver/samples.csv", row.names = 1)
+contrasts <- read.csv("vignettes/data/liver/contrasts.csv", row.names = 1)
+annot <- read.csv("vignettes/data/liver/annot.csv", row.names = 1)
+GMT <- readRDS("vignettes/data/liver/gmt.RDS")
 
 dim(X)
 group <- samples$sex
-xx <- tapply(1:ncol(pgx$X), group, function(ii) pgx$X[,ii])
+xx <- tapply(1:ncol(X), group, function(ii) X[,ii])
 
 par(mfrow = c(2, 3), mar = c(5, 5, 3, 1), cex = 1.4)
 plotPowerAnalysis(t(xx[[1]]), setPar = FALSE)
@@ -25,7 +24,7 @@ cons <- WGCNAplus::runConsensusWGCNA(
   xx,
   phenoData = Y,
   power = 6,
-  annot = pgx$genes,
+  annot = annot,
   compute.enrichment = 1,
   ngenes = 2000,
   minModuleSize = 40,
