@@ -1249,7 +1249,6 @@ ai.get_ollama_models <- function(models = NULL,
   return(available.models)
 
 }
-OLLAMA_MODELS <- ai.get_ollama_models()
 
 #' @export
 ai.ask <- function(question,
@@ -1281,7 +1280,7 @@ ai.ask_ellmer <- function(question,
   if (inherits(model, "Chat")) {
     chat <- model
   } else if (is.character(model)) {
-    if (model %in% OLLAMA_MODELS || grepl("^ollama:", model) ) {
+    if (model %in% ai.get_ollama_models() || grepl("^ollama:", model) ) {
       model1 <- sub("^ollama:", "", model)
       chat <- ellmer::chat_ollama(model = model1, system_prompt = prompt)
     } else if (grepl("^gpt|^openai:",model) && Sys.getenv("OPENAI_API_KEY") != "") {
@@ -1322,7 +1321,7 @@ ai.ask_tidyprompt <- function(question,
                               verbose = 0) {
 
   llm <- NULL
-  if (model %in% OLLAMA_MODELS || grepl("^ollama:", model) ) {
+  if (model %in% ai.get_ollama_models() || grepl("^ollama:", model) ) {
     model1 <- sub("^ollama:", "", model)
     prms <- list(model = model1)
     llm <- tidyprompt::llm_provider_ollama(parameters = prms)
