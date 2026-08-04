@@ -151,7 +151,7 @@ computeWGCNA_multiomics <- function(dataX,
   for (dt in dtlist) {
     cat("[computeWGCNA_multiomics] computing WGCNA for", dt, "-------------\n")
     minkme1 <- ifelse(dt=='ph', 0, minKME[dt])
-    minmodsize <- ifelse(dt=='ph', 1, minmodsize)
+    minmodsize1 <- ifelse(dt=='ph', 1, minmodsize)
     layers[[dt]] <- computeWGCNA(
       X = dataX[[dt]],
       samples = samples,
@@ -164,7 +164,7 @@ computeWGCNA_multiomics <- function(dataX,
       cutMethod = cutMethod,
       deepsplit = deepsplit[dt],
       minKME = minkme1,
-      minmodsize = minmodsize,
+      minmodsize = minmodsize1,
       mergeCutHeight = mergeCutHeight,
       compute.stats = TRUE,
       sv.tom = 40,
