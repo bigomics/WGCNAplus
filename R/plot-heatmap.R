@@ -59,7 +59,7 @@ plotTOM <- function(wgcna,
 
   if (legend) {
     par(oma = c(1, 0, 0, 0), mar = c(0, 0, 0, 0))
-    plotly::layout(
+    graphics::layout(
       matrix(c(
         0, 0, 5, 0,
         0, 0, 2, 0,
