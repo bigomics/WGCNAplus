@@ -220,7 +220,10 @@ computeWGCNA_multiomics <- function(dataX,
   
   ## Get eigengene matrices, remove grey modules
   ww <- lapply(layers, function(w) t(w$net$MEs))
-  ww <- lapply(ww, function(w) w[!grepl("[A-Z]{2}grey$", rownames(w)), , drop=FALSE])
+  ww <- Map(function(w, dt) {
+    prefix <- toupper(dt)
+    w[!grepl(paste0(prefix, "grey$"), rownames(w)), , drop = FALSE]
+  }, ww, names(ww))
   ww <- ww[which(sapply(ww,nrow)>0)]
 
   datTraits <- layers[[1]]$datTraits
