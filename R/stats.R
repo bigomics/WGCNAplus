@@ -510,7 +510,7 @@ gset.fisher <- function(genes,
                         no.pass = NA,
                         verbose = 1) {
 
-  if (class(genesets) == "list") {
+  if (is.list(genesets)) {
     gsnames <- names(genesets)
     res <- gset.fisherLIST(
       genes = genes,

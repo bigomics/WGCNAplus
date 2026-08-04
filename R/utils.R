@@ -368,7 +368,7 @@ logCPM <- function(counts,
     message("[logCPM] setting column sums to = ", round(total, 2))
   }
 
-  if (any(class(counts) == "dgCMatrix")) {
+  if (inherits(counts, "dgCMatrix")) {
     cpm <- counts
     cpm[is.na(cpm)] <- 0
     cpm@x <- total * cpm@x / rep.int(Matrix::colSums(cpm), diff(cpm@p))
@@ -484,12 +484,12 @@ merge_sparse_matrix <- function(m1,
 #' @export
 mofa.strip_prefix <- function(xx) {
 
-  if (class(xx) == "character") {
+  if (is.character(xx)) {
     xx <- sub("[A-Za-z0-9]+:", "", xx)
     return(xx)
   }
 
-  if (class(xx) == "matrix") {
+  if (is.matrix(xx)) {
     rownames(xx) <- sub("[A-Za-z0-9]+:", "", rownames(xx))
     return(xx)
   }
@@ -2126,7 +2126,7 @@ getTopGenesAndSets <- function(wgcna,
                                rename = "symbol") {
 
   
-  if ("layers" %in% names(wgcna) && class(wgcna$datExpr) == "list") {
+  if ("layers" %in% names(wgcna) && is.list(wgcna$datExpr)) {
     message("[getTopGenesAndSets] multilayer object...")
     cons <- .getConsensusTopGenesAndSets(wgcna, annot=annot, module=module,  ntop=ntop, rename=rename)
     return(cons)
