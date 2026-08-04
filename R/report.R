@@ -347,8 +347,12 @@ graph2dot <- function(graph) {
 #' @export
 dot.rankdir <- function(dot, dir) {
 
+  has.rankdir <- grepl("rankdir=", dot)
   if (dir == "TB") dot <- sub("rankdir=LR","rankdir=TB", dot)
   if (dir == "LR") dot <- sub("rankdir=TB","rankdir=LR", dot)
+  if (!has.rankdir) {
+    dot <- sub("\\{", paste0("{\n  rankdir=", dir, ";"), dot)
+  }
 
   return(dot)
 
