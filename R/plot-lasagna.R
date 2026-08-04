@@ -44,10 +44,10 @@ wgcna.plot_lasagna <- function(wgcna, pheno, layout='tsne',
   ) 
 
   ## 3D layout
-  xpos <- layout_multipartite_3d(graph, obj$X, clust=layout)
+  xpos <- lasagna::layout_multipartite_3d(graph, obj$X, clust=layout)
 
   ## plot lasagna
-  p <- plot_3d(graph, layout=xpos, draw_edges=TRUE,
+  p <- lasagna::plot_3d(graph, layout=xpos, draw_edges=TRUE,
     color.by="color", min_rho=0.0, sign_rho="both",
     edge_color = edge_color,
     cex=0.9, cex.gamma=0.5, num_edges=200, znames=NULL) 
