@@ -258,9 +258,17 @@ describeModules <- function(wgcna,
     answer <- ""
     for (m in model) {
       if (verbose > 0) message("  ...asking LLM model ", m)
-      a <- ai.ask(q, model = m)
-      a <- paste0(a, "\n\n[AI generated using ", m, "]\n")
-      if (length(model) > 1) a <- paste0("\n-------------------------------\n\n", a)
+      a <- try(ai.ask(q, model = m), silent = TRUE)
+      if (inherits(a, "try-error")) {
+        message("WARNING: LLM request to model ", m, " failed. Falling back to template summary.")
+        a <- ""
+        if (nzchar(pp)) a <- paste0(a, "**Correlated phenotypes**: ", pp, "\n\n")
+        if (nzchar(gg)) a <- paste0(a, "**Key genes**: ", gg, "\n\n")
+        if (ss != "[no significant genesets]") a <- paste0(a, "**Top enriched gene sets**: ", ss, "\n\n")
+      } else {
+        a <- paste0(a, "\n\n[AI generated using ", m, "]\n")
+        if (length(model) > 1) a <- paste0("\n-------------------------------\n\n", a)
+      }
       answer <- paste0(answer, a)
     }
 
