@@ -36,7 +36,7 @@ P-values are computed from statistical distribution
 }
 \examples{
 \dontrun{
-librart(playbase)
+library(playbase)
 ranks <- sample(1:10000, 1000, replace = TRUE)
 names(ranks) <- replicate(1000, paste(sample(LETTERS, 4, replace = TRUE), collapse = ""))
 genesets <- matrix(rnorm(1000 * 20), ncol = 20)
