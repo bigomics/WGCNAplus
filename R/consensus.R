@@ -435,7 +435,7 @@ getModuleCrossGenes <-  function(wgcna,
   }
 
   if (is.null(ref)) ref <- head(intersect(names(wgcna),c("gx","px")),1)
-  if (is.null(ref) || !ref %in% names(wgcna)) ref <- names(wgcna)[1]
+  if (length(ref) == 0 || !ref %in% names(wgcna)) ref <- names(wgcna)[1]
 
   W <- wgcna[[ref]]
   geneX <- W$datExpr
