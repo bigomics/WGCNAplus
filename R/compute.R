@@ -348,6 +348,7 @@ computeModules <- function(datExpr,
       maxBlockSize = maxBlockSize,
       verbose = verbose
     )
+    net$power <- power
     return(net)
   }
 
