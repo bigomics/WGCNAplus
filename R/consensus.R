@@ -114,12 +114,13 @@ runConsensusWGCNA <- function(exprList,
   consPower <- unlist(sapply(layers, function(w) w$net$power))
   if (is.null(consPower) && !is.null(power)) consPower <- power
   if (is.null(consPower)) consPower <- rep(12, length(layers))
+  names(consPower) <- names(layers) ## ensure name-based subsetting below is safe
 
   sel <- setdiff(names(multiExpr), c("Combined"))
 
   cons <- WGCNA::blockwiseConsensusModules(
     multiExpr[sel],
-    power = as.numeric(consPower),
+    power = as.numeric(consPower[sel]),
     networkType = "signed",
     TOMType = "signed",
     minModuleSize = as.integer(minModuleSize),
@@ -133,7 +134,7 @@ runConsensusWGCNA <- function(exprList,
     verbose = verbose
   )
 
-  cons$power <- consPower
+  cons$power <- consPower[sel]
 
   ## create and match colors
   for (i in 1:length(layers)) {
