@@ -242,16 +242,23 @@ plotDendroAndColors <- function(wgcna,
     ...
   )
 
-  if(show.tom && !is.null(wgcna$svTOM)) {
-    tom <- tcrossprod(wgcna$svTOM)
-    kk <- geneTree$order
-    kk <- kk[round(seq(1, length(kk), length.out = tom.subsample))]
-    tom <- tom[kk, kk]
-    par(mar = c(1, 8, 0, 0.5))
-    image(tom, xaxt = 'n', yaxt = 'n')
-  } else {
-    par(mar = c(0, 0, 0, 0))
-    plot.new()
+  ## A third panel (TOM heatmap or blank filler) is only reserved when this
+  ## function set up its own layout, or when TOM display was requested. When
+  ## called with setLayout = FALSE (e.g. from plotMultiDendroAndColors, which
+  ## only reserves 2 panels per layer), skip it to avoid desyncing the
+  ## caller's panel layout.
+  if (setLayout || show.tom) {
+    if(show.tom && !is.null(wgcna$svTOM)) {
+      tom <- tcrossprod(wgcna$svTOM)
+      kk <- geneTree$order
+      kk <- kk[round(seq(1, length(kk), length.out = tom.subsample))]
+      tom <- tom[kk, kk]
+      par(mar = c(1, 8, 0, 0.5))
+      image(tom, xaxt = 'n', yaxt = 'n')
+    } else {
+      par(mar = c(0, 0, 0, 0))
+      plot.new()
+    }
   }
 
 }
