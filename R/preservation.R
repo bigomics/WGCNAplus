@@ -69,8 +69,8 @@ runPreservationWGCNA <- function(exprList,
     message("[runPreservationWGCNA] adding merged layer...")
     cX <- lapply(exprList, function(x) x - rowMeans(x))
     merged <- do.call(cbind, cX)
-    exprList$Merged <- NULL
-    exprList <- c(list(Merged = merged), exprList)
+    exprList$Consensus <- NULL
+    exprList <- c(list(Consensus = merged), exprList)
     cons.colors <- pres$net$colors
     colorList <- c(list(Consensus = cons.colors), colorList)
     reference <- reference + 1
@@ -90,14 +90,17 @@ runPreservationWGCNA <- function(exprList,
   )
 
   ## Zsummary tables
+  ## do.call(cbind, lapply(...)) instead of sapply(): sapply collapses to a
+  ## plain vector (no dimensions) when mp.tables has length 1, which breaks
+  ## the rownames()/colnames() assignment below.
   mp.tables <- mp$preservation$Z[[1]][-reference]
-  Z <- sapply(mp.tables, function(mat) mat[, "Zsummary.pres"])
+  Z <- do.call(cbind, lapply(mp.tables, function(mat) mat[, "Zsummary.pres"]))
   rownames(Z) <- paste0("ME", rownames(mp.tables[[1]]))
   colnames(Z) <- names(multiExpr)[-reference]
 
   ## median rank
   mp.tables <- mp$preservation$observed[[1]][-reference]
-  M <- sapply(mp.tables, function(mat) mat[, "medianRank.pres"])
+  M <- do.call(cbind, lapply(mp.tables, function(mat) mat[, "medianRank.pres"]))
   rownames(M) <- paste0("ME", rownames(mp.tables[[1]]))
   colnames(M) <- names(multiExpr)[-reference]
 
@@ -114,22 +117,27 @@ runPreservationWGCNA <- function(exprList,
 
   ## Compute module-trait correlation matrices
   Y <- lapply(pres$layers, function(w) w$datTraits)
-  if ("Merged" %in% names(MEx) && !"Merged" %in% names(Y)) {
-    kk <- rownames(MEx[["Merged"]])
-    Y[["Merged"]] <- pres$datTraits[kk, ]
+  if ("Consensus" %in% names(MEx) && !"Consensus" %in% names(Y)) {
+    kk <- rownames(MEx[["Consensus"]])
+    Y[["Consensus"]] <- pres$datTraits[kk, , drop = FALSE]
     Y <- Y[names(MEx)]
   }
 
   kk <- Reduce(union, lapply(Y, colnames))
-  Y <- lapply(Y, function(y) y[, match(kk, colnames(y)), drop = FALSE])
-  for (i in 1:length(Y)) colnames(Y[[i]]) <- kk
+  Y <- lapply(Y, function(y) {
+    y2 <- matrix(NA_real_, nrow(y), length(kk), dimnames = list(rownames(y), kk))
+    shared <- intersect(kk, colnames(y))
+    y2[, shared] <- y[, shared, drop = FALSE]
+    y2
+  })
 
   R <- mapply(cor, MEx, Y, use = "pairwise", SIMPLIFY = FALSE)
+
+  ref <- reference.name
 
   ## gene statistics of reference layer
   if (compute.stats) {
     message("[runPreservationWGCNA] computing gene statistics...")
-    ref <- reference.name
     wnet <- list(MEs = MEx[[ref]], colors = pres$colors[, ref])
     pres$stats <- computeGeneStats(wnet, pres$datExpr[[ref]], pres$datTraits, TOM = NULL)
   }

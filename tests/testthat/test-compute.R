@@ -1,6 +1,5 @@
 test_that("computeWGCNA runs on small data", {
   skip_on_cran()
-  skip_if_not_installed("playbase")
 
   td <- create_test_data(ngenes = 80, nsamples = 20, nmodules = 3)
 
@@ -73,7 +72,6 @@ test_that("fastTOMsimilarity validates tomtype", {
 
 test_that("computeGeneStats accepts a full wgcna object as net", {
   skip_on_cran()
-  skip_if_not_installed("playbase")
 
   td <- create_test_data(ngenes = 30, nsamples = 10, nmodules = 2)
   res <- computeWGCNA(
@@ -94,7 +92,6 @@ test_that("computeGeneStats accepts a full wgcna object as net", {
 
 test_that("getGeneStats safe_col handles missing traits gracefully", {
   skip_on_cran()
-  skip_if_not_installed("playbase")
 
   td <- create_test_data(ngenes = 30, nsamples = 10, nmodules = 2)
   res <- computeWGCNA(

@@ -78,6 +78,9 @@ computeWGCNA_multiomics <- function(dataX,
     if (length(kk) == 0) {
       message("[computeWGCNA_multiomics] X and GMT do not share features")
     } else {
+      if (!requireNamespace("plaid", quietly = TRUE)) {
+        stop("Package 'plaid' is required for gene-set score computation")
+      }
       dataX$gs <- plaid::plaid(X[kk,], GMT[kk,])
     }
   }
@@ -133,9 +136,9 @@ computeWGCNA_multiomics <- function(dataX,
         contrasts = contrasts,
         prefix = c("GX", "PX"),
         ngenes = ngenes,
-        power = power[1],
+        power = power[c('gx','px')],
         minModuleSize = minmodsize,
-        deepSplit = deepsplit[1],
+        deepSplit = deepsplit[['gx']],
         mergeCutHeight = mergeCutHeight,
         minKME = minKME[c('gx','px')],
         maxBlockSize = 9999,
@@ -148,7 +151,7 @@ computeWGCNA_multiomics <- function(dataX,
   for (dt in dtlist) {
     cat("[computeWGCNA_multiomics] computing WGCNA for", dt, "-------------\n")
     minkme1 <- ifelse(dt=='ph', 0, minKME[dt])
-    minmodsize <- ifelse(dt=='ph', 1, minmodsize)
+    minmodsize1 <- ifelse(dt=='ph', 1, minmodsize)
     layers[[dt]] <- computeWGCNA(
       X = dataX[[dt]],
       samples = samples,
@@ -161,7 +164,7 @@ computeWGCNA_multiomics <- function(dataX,
       cutMethod = cutMethod,
       deepsplit = deepsplit[dt],
       minKME = minkme1,
-      minmodsize = minmodsize,
+      minmodsize = minmodsize1,
       mergeCutHeight = mergeCutHeight,
       compute.stats = TRUE,
       sv.tom = 40,
@@ -217,13 +220,20 @@ computeWGCNA_multiomics <- function(dataX,
   
   ## Get eigengene matrices, remove grey modules
   ww <- lapply(layers, function(w) t(w$net$MEs))
-  ww <- lapply(ww, function(w) w[!grepl("[A-Z]{2}grey$", rownames(w)), , drop=FALSE])
+  ww <- Map(function(w, dt) {
+    prefix <- toupper(dt)
+    w[!grepl(paste0(prefix, "grey$"), rownames(w)), , drop = FALSE]
+  }, ww, names(ww))
   ww <- ww[which(sapply(ww,nrow)>0)]
 
   datTraits <- layers[[1]]$datTraits
   gdata <- list(X = ww, samples = datTraits)
 
   message("[computeWGCNA_multiomics] Creating LASAGNA model and graph ...")
+
+  if (!requireNamespace("lasagna", quietly = TRUE)) {
+    stop("Package 'lasagna' is required for multi-omics graph construction in computeWGCNA_multiomics()")
+  }
 
   lasagna.model <- lasagna::create_model(
     gdata,

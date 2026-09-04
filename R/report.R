@@ -47,7 +47,8 @@ create_report <- function(wgcna,
   
   if (is.null(annot)) message("[create_report] No annot supplied. This is recommended.")
 
-  ## Step 1. Describe modules with LLM. We can use one LLM model or more.
+  ## Step 1. Extract template descriptions for top modules (no LLM call
+  ## here - model="" - the per-module LLM description happens in Step 2).
   if (verbose) message("Extracting top modules...")
   out <- describeModules(
     layers,
@@ -258,9 +259,17 @@ describeModules <- function(wgcna,
     answer <- ""
     for (m in model) {
       if (verbose > 0) message("  ...asking LLM model ", m)
-      a <- ai.ask(q, model = m)
-      a <- paste0(a, "\n\n[AI generated using ", m, "]\n")
-      if (length(model) > 1) a <- paste0("\n-------------------------------\n\n", a)
+      a <- try(ai.ask(q, model = m), silent = TRUE)
+      if (inherits(a, "try-error") || is.null(a) || !nzchar(a)) {
+        message("WARNING: LLM request to model ", m, " failed. Falling back to template summary.")
+        a <- ""
+        if (nzchar(pp)) a <- paste0(a, "**Correlated phenotypes**: ", pp, "\n\n")
+        if (nzchar(gg)) a <- paste0(a, "**Key genes**: ", gg, "\n\n")
+        if (ss != "[no significant genesets]") a <- paste0(a, "**Top enriched gene sets**: ", ss, "\n\n")
+      } else {
+        a <- paste0(a, "\n\n[AI generated using ", m, "]\n")
+        if (length(model) > 1) a <- paste0("\n-------------------------------\n\n", a)
+      }
       answer <- paste0(answer, a)
     }
 
@@ -339,8 +348,12 @@ graph2dot <- function(graph) {
 #' @export
 dot.rankdir <- function(dot, dir) {
 
+  has.rankdir <- grepl("rankdir=", dot)
   if (dir == "TB") dot <- sub("rankdir=LR","rankdir=TB", dot)
   if (dir == "LR") dot <- sub("rankdir=TB","rankdir=LR", dot)
+  if (!has.rankdir) {
+    dot <- sub("\\{", paste0("{\n  rankdir=", dir, ";"), dot)
+  }
 
   return(dot)
 

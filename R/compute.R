@@ -270,6 +270,114 @@ computeWGCNA <- function(X,
 
 }
 
+#' Resolve soft-thresholding power for computeModules
+#' @keywords internal
+.computeModulesPower <- function(datExpr, power) {
+
+  if (is.null(power) || is.na(power)) power <- "sft" ## use iqr?
+  auto.power <- power[1] %in% c("sft", "iqr")
+  if (auto.power) {
+    message("[computeModules] estimating power with method = ", power[1])
+    powers <- c(c(1:10), seq(from = 12, to = 20, by = 2))
+    powers <- c(powers, seq(from = 25, to = 50, by = 5))
+    power <- pickSoftThreshold(datExpr, sft = NULL, rcut = 0.85,
+      method = power[1], nmax = 2000, verbose = 0)
+    if (is.na(power)) power <- 6
+    message("[compute_multiomics] estimated power = ", power)
+  }
+
+  return(power)
+
+}
+
+#' Compute TOM matrix using the requested strategy
+#' @keywords internal
+.computeModulesTOM <- function(datExpr, power, networkType, calcMethod, TOMType, lowrank, verbose) {
+
+  adjacency <- WGCNA::adjacency(datExpr, power = power, type = networkType)
+  adjacency[is.na(adjacency)] <- 0
+  if (calcMethod == "fast") {
+    if (verbose > 0) message("[computeModules] Computing TOM matrix using fast method...")
+    TOM <- fastTOMsimilarity(adjacency, lowrank = lowrank, tomtype = TOMType)
+  } else if (calcMethod == "adjacency") {
+    if (verbose > 0) message("[computeModules] Computing using adjacency as TOM matrix...")
+    TOM <- adjacency
+  } else if (calcMethod == "full") {
+    if (verbose > 0) message("[computeModules] Computing full TOM matrix...") ## SLOW!!!
+    TOM <- WGCNA::TOMsimilarity(adjacency, TOMType = TOMType, verbose = verbose)
+  } else {
+    stop("[computeModules] ERROR: invalid calcMethod parameter:", calcMethod)
+  }
+  dimnames(TOM) <- dimnames(adjacency)
+
+  return(TOM)
+
+}
+
+#' Determine module labels by cutting the gene tree
+#' @keywords internal
+.computeModulesCutTree <- function(geneTree, dissTOM, cutMethod, treeCut, treeCutCeiling,
+                                    deepSplit, minModuleSize, minModuleSize2, verbose) {
+
+  ## exception1
+  if (minModuleSize <= 1 && cutMethod != "static") {
+    message("WARNING: minModuleSize==1. Changing to static cutting")
+    cutMethod <- "static"
+  }
+
+  if (treeCut > 1 && cutMethod != "static") {
+    message("WARNING: treeCut > 1. Changing to static cutting")
+    cutMethod <- "static"
+  }
+  if (treeCut <= 1) {
+    ## transform from relative to actual
+    qq <- quantile(geneTree$height, probs = c(0.05, treeCutCeiling))
+    treeCut <- qq[1] + treeCut * diff(qq)
+  }
+
+  if (verbose > 0) {
+    message("Tree cut method: ", cutMethod)
+    message("treeCut = ", treeCut)
+    message("deepSplit = ", deepSplit)
+    message("minModuleSize = ", minModuleSize)
+  }
+
+  if (cutMethod %in% c("hybrid", "tree")) {
+    if (cutMethod == "tree") deepSplit <- (deepSplit > 0)
+    label <- dynamicTreeCut::cutreeDynamic(
+      geneTree,
+      method = cutMethod,
+      cutHeight = treeCut,
+      distM = dissTOM,
+      deepSplit = deepSplit,
+      minClusterSize = minModuleSize2
+    )
+  } else if (cutMethod == "static" && treeCut <= 1) {
+    if (verbose > 0) message("Static cutting tree at fixed H = ", treeCut)
+    label <- cutree(geneTree, h = treeCut)
+  } else if (cutMethod == "static" && treeCut > 1) {
+    if (verbose > 0) message("Static cutting tree with fixed K = ", treeCut)
+    label <- cutree(geneTree, k = treeCut)
+  } else {
+    stop("ERROR: could not determine cutMethod")
+  }
+  label <- as.integer(label)
+
+  return(label)
+
+}
+
+#' Compute shared color order for module renaming
+#' @keywords internal
+.computeModulesColorOrder <- function(colors, unmergedColors) {
+
+  colorOrder <- names(sort(table(colors), decreasing = TRUE))
+  colorOrder <- unique(c("grey", colorOrder, unmergedColors))
+
+  return(colorOrder)
+
+}
+
 #' Reimplementation for WGCNA::blockwiseModules(). This returns exact
 #' same object as WGCNA::blockwiseModules() but is faster and allows
 #' different clustering linkage methods (ward, complete).
@@ -321,17 +429,7 @@ computeModules <- function(datExpr,
   deepSplit <- as.integer(deepSplit)
   lowrank <- as.integer(lowrank)
 
-  if (is.null(power) || is.na(power)) power <- "sft" ## use iqr?
-  auto.power <- power[1] %in% c("sft", "iqr")
-  if (auto.power) {
-    message("[computeModules] estimating power with method = ", power[1])
-    powers <- c(c(1:10), seq(from = 12, to = 20, by = 2))
-    powers <- c(powers, seq(from = 25, to = 50, by = 5))
-    power <- pickSoftThreshold(datExpr, sft = NULL, rcut = 0.85,
-      method = power[1], nmax = 2000, verbose = 0)
-    if (is.na(power)) power <- 6
-    message("[compute_multiomics] estimated power = ", power)
-  }
+  power <- .computeModulesPower(datExpr, power)
 
   if (calcMethod == "blockwise") {
     message("[computeModules] computing blockwiseModules...")
@@ -348,27 +446,14 @@ computeModules <- function(datExpr,
       maxBlockSize = maxBlockSize,
       verbose = verbose
     )
+    net$power <- power
     return(net)
   }
 
   clustMethod <- sub("^ward$", "ward.D", clustMethod)
 
   if (is.null(TOM)) {
-    adjacency <- WGCNA::adjacency(datExpr, power = power, type = networkType)
-    adjacency[is.na(adjacency)] <- 0
-    if (calcMethod == "fast") {
-      if (verbose > 0) message("[computeModules] Computing TOM matrix using fast method...")
-      TOM <- fastTOMsimilarity(adjacency, lowrank = lowrank, tomtype = TOMType)
-    } else if (calcMethod == "adjacency") {
-      if (verbose > 0) message("[computeModules] Computing using adjacency as TOM matrix...")
-      TOM <- adjacency
-    } else if (calcMethod == "full") {
-      if (verbose > 0) message("[computeModules] Computing full TOM matrix...") ## SLOW!!!
-      TOM <- WGCNA::TOMsimilarity(adjacency, TOMType = TOMType, verbose = verbose)
-    } else {
-      stop("[computeModules] ERROR: invalid calcMethod parameter:", calcMethod)
-    }
-    dimnames(TOM) <- dimnames(adjacency)
+    TOM <- .computeModulesTOM(datExpr, power, networkType, calcMethod, TOMType, lowrank, verbose)
   }
 
   ## transform to dissTOM
@@ -381,46 +466,7 @@ computeModules <- function(datExpr,
   ## sometimes there is a height error. following is a fix.
   geneTree$height <- round(geneTree$height, 6)
 
-  ## exception1
-  if (minModuleSize <= 1 && cutMethod != "static") {
-    message("WARNING: minModuleSize==1. Changing to static cutting")
-    cutMethod <- "static"
-  }
-
-  if (treeCut > 1) cutMethod <- "static"
-  if (treeCut <= 1) {
-    ## transform from relative to actual
-    qq <- quantile(geneTree$height, probs = c(0.05, treeCutCeiling))
-    treeCut <- qq[1] + treeCut * diff(qq)
-  }
-
-  if (verbose > 0) {
-    message("Tree cut method: ", cutMethod)
-    message("treeCut = ", treeCut)
-    message("deepSplit = ", deepSplit)
-    message("minModuleSize = ", minModuleSize)
-  }
-
-  if (cutMethod %in% c("hybrid", "tree")) {
-    if (cutMethod == "tree") deepSplit <- (deepSplit > 0)
-    label <- dynamicTreeCut::cutreeDynamic(
-      geneTree,
-      method = cutMethod,
-      cutHeight = treeCut,
-      distM = dissTOM,
-      deepSplit = deepSplit,
-      minClusterSize = minModuleSize2
-    )
-  } else if (cutMethod == "static" && treeCut <= 1) {
-    if (verbose > 0) message("Static cutting tree at fixed H = ", treeCut)
-    label <- cutree(geneTree, h = treeCut)
-  } else if (cutMethod == "static" && treeCut > 1) {
-    if (verbose > 0) message("Static cutting tree with fixed K = ", treeCut)
-    label <- cutree(geneTree, k = treeCut)
-  } else {
-    stop("ERROR: could not determine cutMethod")
-  }
-  label <- as.integer(label)
+  label <- .computeModulesCutTree(geneTree, dissTOM, cutMethod, treeCut, treeCutCeiling, deepSplit, minModuleSize, minModuleSize2, verbose)
   nmodules <- length(unique(label))
   if (verbose > 0) message("Found ", nmodules, " modules")
 
@@ -489,8 +535,7 @@ computeModules <- function(datExpr,
   # Rename to numeric
   if (numericLabels) {
     if (verbose > 0) message("Renaming to numeric labels")
-    colorOrder <- names(sort(table(colors), decreasing = TRUE))
-    colorOrder <- unique(c("grey", colorOrder))
+    colorOrder <- .computeModulesColorOrder(colors, unmergedColors)
     colors <- match(colors, colorOrder) - 1
     unmergedColors <- match(unmergedColors, colorOrder) - 1
     mecolor <- sub("^ME", "", names(MEs))
@@ -498,8 +543,7 @@ computeModules <- function(datExpr,
   } else {
     # Rename to standard colors, most frequent first
     if (verbose > 0) message("Renaming to standard colors")
-    colorOrder <- names(sort(table(colors), decreasing = TRUE))
-    colorOrder <- unique(c("grey", colorOrder))
+    colorOrder <- .computeModulesColorOrder(colors, unmergedColors)
     newcolor <- setdiff(WGCNA::standardColors(), "grey")
     n0 <- length(colorOrder)
     n1 <- length(newcolor)

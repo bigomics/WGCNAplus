@@ -43,7 +43,7 @@ plotTOM <- function(wgcna,
     if (is.null(block)) block <- 1
     geneTree <- wgcna$net$dendrograms[[block]]
     ii <- which(wgcna$net$blocks == block & wgcna$net$goodGenes == TRUE)
-    gg <- names(wgcna$net$color)[ii]
+    gg <- names(wgcna$net$colors)[ii]
     dissTOM <- dissTOM[gg, gg]
     moduleColors <- labels2colors(wgcna$net$colors[gg])
   }
@@ -59,7 +59,7 @@ plotTOM <- function(wgcna,
 
   if (legend) {
     par(oma = c(1, 0, 0, 0), mar = c(0, 0, 0, 0))
-    plotly::layout(
+    graphics::layout(
       matrix(c(
         0, 0, 5, 0,
         0, 0, 2, 0,
@@ -122,7 +122,7 @@ plotModuleTraitHeatmap <- function(wgcna,
   MEs <- mergeME(MEs)
 
   Y <- layers[[1]]$datTraits
-  sel <- 1:ncol(Y)
+  sel <- seq_len(ncol(Y))
   if (show == "traits") sel <- grep("_vs_",colnames(Y),invert=TRUE)
   if (show == "contrasts") sel <- grep("_vs_",colnames(Y))
   Y <- Y[, sel, drop = FALSE]
@@ -213,10 +213,14 @@ plotLabeledCorrelationHeatmap <- function(R,
   }
 
   R0 <- pmax(pmin(R, 1, na.rm=TRUE), -1, na.rm=TRUE)
-  ii <- which(nSamples < 3)
+  low.n <- nSamples < 3
   nSamples <- pmax(nSamples, 3)
   Pvalue <- WGCNA::corPvalueStudent(R0, nSamples)
-  if (is.matrix(nSamples) && length(ii)>0) { Pvalue[ii] <- NA }
+  if (is.matrix(low.n)) {
+    if (any(low.n)) Pvalue[which(low.n)] <- NA
+  } else if (isTRUE(low.n)) {
+    Pvalue[] <- NA
+  }
 
   if (justdata) return(R)
 

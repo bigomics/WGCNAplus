@@ -21,27 +21,19 @@ plotConsensusOverlapHeatmap <- function(net1, net2,
     layout.matrix <- matrix(c(1, 2, 5, 3, 4, 5), nrow = 3, ncol = 2)
     layout(mat = layout.matrix, heights = c(0.8, 0.2, 2.5), widths = c(1, 1))
 
-    WGCNA::plotDendroAndColors(
-      dendro = net1$dendrograms[[1]],
-      colors = net1$colors,
-      dendroLabels = FALSE,
-      hang = 0.03,
-      addGuide = FALSE,
-      guideHang = 0.05,
-      setLayout = FALSE,
-      main = setLabels[1]
-    )
-
-    WGCNA::plotDendroAndColors(
-      dendro = net2$dendrograms[[1]],
-      colors = net2$colors,
-      dendroLabels = FALSE,
-      hang = 0.03,
-      addGuide = FALSE,
-      guideHang = 0.05,
-      setLayout = FALSE,
-      main = setLabels[2]
-    )
+    nets <- list(net1, net2)
+    for (i in 1:2) {
+      WGCNA::plotDendroAndColors(
+        dendro = nets[[i]]$dendrograms[[1]],
+        colors = nets[[i]]$colors,
+        dendroLabels = FALSE,
+        hang = 0.03,
+        addGuide = FALSE,
+        guideHang = 0.05,
+        setLayout = FALSE,
+        main = setLabels[i]
+      )
+    }
 
   }
 
@@ -212,7 +204,7 @@ plotPreservationModuleTraits <- function(pres,
     cval <- seq(-clim, clim, length.out = 201)
     ii <- which(cval >= min(consZ, na.rm = TRUE) & cval <= max(consZ, na.rm = TRUE))
     col2 <- WGCNA::blueWhiteRed(201)[ii]
-    jj <- 1:ncol(consZ)
+    jj <- seq_len(ncol(consZ))
     if (rm.na) jj <- validcol(consZ)
     WGCNA::labeledHeatmap(
       Matrix = consZ[, jj, drop = FALSE],
@@ -237,7 +229,7 @@ plotPreservationModuleTraits <- function(pres,
     ii <- which(cval >= min(consW, na.rm = TRUE) & cval <= max(consW, na.rm = TRUE))
     col2 <- WGCNA::blueWhiteRed(201)[ii]
 
-    jj <- 1:ncol(consW)
+    jj <- seq_len(ncol(consW))
     if (rm.na) jj <- validcol(consW)
     WGCNA::labeledHeatmap(
       Matrix = consW[, jj, drop = FALSE],

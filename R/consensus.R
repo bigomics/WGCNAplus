@@ -114,12 +114,13 @@ runConsensusWGCNA <- function(exprList,
   consPower <- unlist(sapply(layers, function(w) w$net$power))
   if (is.null(consPower) && !is.null(power)) consPower <- power
   if (is.null(consPower)) consPower <- rep(12, length(layers))
+  names(consPower) <- names(layers) ## ensure name-based subsetting below is safe
 
   sel <- setdiff(names(multiExpr), c("Combined"))
 
   cons <- WGCNA::blockwiseConsensusModules(
     multiExpr[sel],
-    power = as.numeric(consPower),
+    power = as.numeric(consPower[sel]),
     networkType = "signed",
     TOMType = "signed",
     minModuleSize = as.integer(minModuleSize),
@@ -133,7 +134,7 @@ runConsensusWGCNA <- function(exprList,
     verbose = verbose
   )
 
-  cons$power <- consPower
+  cons$power <- consPower[sel]
 
   ## create and match colors
   for (i in 1:length(layers)) {
@@ -290,7 +291,8 @@ createConsensusLayers <- function(exprList,
   multiExpr <- WGCNA::list2multiData(lapply(exprList, Matrix::t))
 
   ## determine power vector
-  if (is.null(power) || any(is.na(power))) power <- "sft"
+  nw <- length(exprList)
+  if (is.null(power)) power <- "sft"
   if (as.character(power[1]) %in% c("sft", "iqr")) {
     ## Estimate best power
     power <- power[1]
@@ -308,8 +310,20 @@ createConsensusLayers <- function(exprList,
     power <- ifelse(is.na(est.power), 12, est.power)
   } else {
     power <- as.numeric(power)
+    power <- head(rep(power, nw), nw)
+    if (any(is.na(power))) {
+      message("[createConsensusLayers] estimating power for ", sum(is.na(power)), " layer(s) missing an explicit value")
+      for (i in which(is.na(power))) {
+        p <- pickSoftThreshold(
+          Matrix::t(exprList[[i]]),
+          sft = NULL, rcut = 0.85, powers = NULL,
+          method = "sft", nmax = 1000, verbose = 0
+        )
+        if (length(p) == 0 || is.null(p)) p <- NA
+        power[i] <- ifelse(is.na(p), 12, p)
+      }
+    }
   }
-  nw <- length(exprList)
   power <- head(rep(power, nw), nw)
   names(power) <- names(exprList)
 
@@ -435,18 +449,22 @@ getModuleCrossGenes <-  function(wgcna,
   }
 
   if (is.null(ref)) ref <- head(intersect(names(wgcna),c("gx","px")),1)
-  if (is.null(ref) || !ref %in% names(wgcna)) ref <- names(wgcna)[1]
+  if (length(ref) == 0 || !ref %in% names(wgcna)) ref <- names(wgcna)[1]
 
   W <- wgcna[[ref]]
   geneX <- W$datExpr
 
-  MEx <- sapply(wgcna, function(w) as.matrix(w$net$MEs))
+  MEx <- lapply(wgcna, function(w) as.matrix(w$net$MEs))
   MEx <- do.call(cbind, MEx)
 
   if (!is.null(modules)) {
     modules <- intersect(modules, colnames(MEx))
     MEx <- MEx[,modules,drop=FALSE]
   }
+
+  kk <- intersect(rownames(geneX), rownames(MEx))
+  geneX <- geneX[kk, , drop = FALSE]
+  MEx <- MEx[kk, , drop = FALSE]
 
   nbx.cor <- cor(geneX, MEx)
 

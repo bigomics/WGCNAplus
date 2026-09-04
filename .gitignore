@@ -7,6 +7,10 @@
 *.Rcheck/
 *.tar.gz
 
+# WGCNA::modulePreservation() writes this to the working directory
+# whenever it runs (savePermutedStatistics defaults to TRUE)
+tests/testthat/permutedStats-*.RData
+
 # RStudio
 .Rproj.user/
 *.Rproj

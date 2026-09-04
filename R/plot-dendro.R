@@ -57,7 +57,8 @@ plotDendroAndColors <- function(wgcna,
   ## select dendrogram
   dendro <- net$dendrograms
   if ("layers" %in% names(wgcna) && use.tree > 0) {
-    dendro <- wgcna$layers[[use.tree]]$net$dendrograms
+    net <- wgcna$layers[[use.tree]]$net
+    dendro <- net$dendrograms
   }
   if (length(dendro) > 1) {
     message("warning: this wgcna has multiple blocks")
@@ -71,12 +72,12 @@ plotDendroAndColors <- function(wgcna,
 
   if (is.null(gg) && !is.null(block)) {
     ii <- which(net$blocks == block & net$goodGenes == TRUE)
-    gg <- names(net$color)[ii]
+    gg <- names(net$colors)[ii]
   }
 
   if (is.null(gg) && is.null(block)) {
     ii <- which(net$goodGenes == TRUE)
-    gg <- names(net$color)[ii]
+    gg <- names(net$colors)[ii]
   }
 
   colors <- colors[match(gg, rownames(colors)), , drop = FALSE]

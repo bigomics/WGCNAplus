@@ -130,13 +130,16 @@ run_enrichment_methods <- function(ME,
   pval.list <- list()
 
   bg <- intersect(rownames(GMT), rownames(geneX))
-  GMT <- GMT[bg, ]
-  geneX <- geneX[bg, ]
+  GMT <- GMT[bg, , drop = FALSE]
+  geneX <- geneX[bg, , drop = FALSE]
 
   ## select on minimum genes
   sel <- which(Matrix::colSums(GMT!=0) >= min.genes)
-  GMT <- GMT[, sel]
+  GMT <- GMT[, sel, drop = FALSE]
 
+  if (!requireNamespace("plaid", quietly = TRUE)) {
+    stop("Package 'plaid' is required for gene-set enrichment computation")
+  }
   gsetX <- plaid::plaid(geneX, matG=GMT)
   message("Computing enrichment for ", nrow(gsetX), " genesets")
 
@@ -198,7 +201,7 @@ run_enrichment_methods <- function(ME,
 
   gmt <- mat2gmt(GMT)
 
-  Pmin <- sapply(pval.list, function(P) apply(P, 1, min))
+  Pmin <- do.call(cbind, lapply(pval.list, function(P) apply(P, 1, min)))
   sel <- head(order(rowMeans(apply(Pmin, 2, rank))), 5 * ntop)
   message("[run_enrichment_methods] preselecting ", length(sel), " sets for fgsea/Fisher test")
   sel <- rownames(Pmin)[sel]
@@ -249,7 +252,7 @@ run_enrichment_methods <- function(ME,
     }
 
     ## handle infinite or NA
-    rho[is.infinite(rho)] <- 2 * max(rho, na.rm = TRUE) ## Inf odd.ratio
+    rho[is.infinite(rho)] <- 2 * max(rho[is.finite(rho)], na.rm = TRUE) ## Inf odd.ratio
     pval[is.na(pval)] <- 1
     rho[is.na(rho)] <- 0
     

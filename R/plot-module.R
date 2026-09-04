@@ -197,7 +197,6 @@ plotModuleScores <- function(res,
 #' @param collapse.trait If TRUE, collapse trait matrix (multi only).
 #' @param setpar Set par layout: TRUE/1 for portrait, 2 for landscape, FALSE for none.
 #' @return NULL (invisible). Generates a plot.
-#' @export
 plotModuleScores.BAK <- function(res, trait,
                                  multi = FALSE,
                                  nmax = 16,

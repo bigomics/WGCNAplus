@@ -9,7 +9,6 @@ describeModules(
   ntop = 50,
   psig = 0.05,
   annot = NULL,
-  multi = FALSE,
   modules = NULL,
   experiment = "",
   verbose = 1,
@@ -27,8 +26,6 @@ describeModules(
 \item{psig}{P-value significance threshold.}
 
 \item{annot}{Annotation table or NULL.}
-
-\item{multi}{Use multi-omics mode.}
 
 \item{modules}{Module names to describe.}
 

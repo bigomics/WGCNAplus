@@ -402,6 +402,12 @@ getConsensusGeneStats <- function(cons,
     )
   }
 
+  missing.layers <- names(gstats)[sapply(gstats, is.null)]
+  if (length(missing.layers)) {
+    stop("[getConsensusGeneStats] trait '", trait, "' not found in layer(s): ",
+         paste(missing.layers, collapse = ", "))
+  }
+
   ## Align rows
   ff <- gstats[[1]]$feature
   for (k in names(gstats)) {
@@ -504,7 +510,7 @@ gset.fisher <- function(genes,
                         no.pass = NA,
                         verbose = 1) {
 
-  if (class(genesets) == "list") {
+  if (is.list(genesets)) {
     gsnames <- names(genesets)
     res <- gset.fisherLIST(
       genes = genes,
@@ -554,6 +560,7 @@ gset.fisher <- function(genes,
 
 }
 
+#' Perform Fisher's exact test on gene sets, returning per-geneset results as a list
 #' @export
 gset.fisherLIST <- function(genes,
                             genesets,

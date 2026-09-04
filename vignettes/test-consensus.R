@@ -3,17 +3,21 @@
 ##-----------------------
 library(devtools)
 load_all()
-setwd("vignettes/")
 
-X <- read.csv("./data/liver/expression.csv", row.names = 1); dim(X)
-samples <- read.csv("./data/liver/samples.csv", row.names = 1)
-contrasts <- read.csv("./data/liver/contrasts.csv", row.names = 1)
-annot <- read.csv("./data/liver/annot.csv", row.names = 1)
-GMT <- readRDS("./data/liver/gmt.RDS")
+X <- read.csv("vignettes/data/liver/expression.csv", row.names = 1)
+samples <- read.csv("vignettes/data/liver/samples.csv", row.names = 1)
+contrasts <- read.csv("vignettes/data/liver/contrasts.csv", row.names = 1)
+annot <- read.csv("vignettes/data/liver/annot.csv", row.names = 1)
+GMT <- readRDS("vignettes/data/liver/gmt.RDS")
 
 X <- as.matrix(X)
 all.equal(rownames(samples), colnames(X))
 group <- samples$sex
+##xx <- tapply(1:ncol(X), group, function(ii) X[,ii])
+##par(mfrow = c(2, 3), mar = c(5, 5, 3, 1), cex = 1.4)
+##plotPowerAnalysis(t(xx[[1]]), setPar = FALSE)
+##plotPowerAnalysis(t(xx[[2]]), setPar = FALSE)
+
 exprList <- list()
 exprList[["Female"]] <- X[, which(group == "Female")]; 
 exprList[["Male"]] <- X[, which(group == "Male")]; 
@@ -54,23 +58,23 @@ table(cc[,1])
 grey <- which(cc[,1] == "grey")
 length(unique(rownames(cc)[-grey]))
 
-ff <- "~/Desktop/WGCNAplus/WGCNAplus/vignettes/paper_figures_tables/Fig5A1.pdf"
-pdf(file = ff, width = 10, height = 6)
+##ff <- "Fig5A1.pdf"
+##pdf(file = ff, width = 10, height = 6)
 par(mfrow = c(1, 2), mar = c(6, 8, 1, 1))
 net1 = cons$net
 net2 = cons$layers[["Female"]]$net
 lb = c("Consensus", "Female")
 WGCNAplus::plotConsensusOverlapHeatmap(net1 = net1, net2 = net2, setLabels = lb)
-dev.off()
+##dev.off()
 
-ff <- "~/Desktop/WGCNAplus/WGCNAplus/vignettes/paper_figures_tables/Fig5A2.pdf"
-pdf(file = ff, width = 10, height = 6)
+##ff <- "Fig5A2.pdf"
+##pdf(file = ff, width = 10, height = 6)
 par(mfrow = c(1, 2), mar = c(6, 8, 1, 1))
 net1 = cons$net
 net2 = cons$layers[["Male"]]$net
 lb = c("Consensus", "Male")
 WGCNAplus::plotConsensusOverlapHeatmap(net1 = net1, net2 = net2, setLabels = lb)
-dev.off()
+##dev.off()
 
 lb1 <- cons$layers[["Female"]]$net$colors
 lb2 <- cons$layers[["Male"]]$net$colors
@@ -99,14 +103,10 @@ rownames(cons.mods) <- 1:nrow(cons.mods)
 cons.mods
 
 
-ff <- "~/Desktop/WGCNAplus/WGCNAplus/vignettes/paper_figures_tables/Fig60.pdf"
-pdf(file = ff, width = 10, height = 6)
 par(mfrow = c(1, 1), mar = c(6, 10, 1, 4))
 nsamples <- min(ncol(exprList[["Female"]]), ncol(exprList[["Male"]]))
 WGCNAplus::plotLabeledCorrelationHeatmap(cons$consModTraits, nsamples,
   cluster = TRUE, text = FALSE, pstar = TRUE, cex.lab=1.2, setpar = FALSE, main = "")
-dev.off()
-
 
 ## ## gene statistics
 ## top <- WGCNAplus::getTopGenesAndSets(cons, module = NULL, ntop = 10) 
