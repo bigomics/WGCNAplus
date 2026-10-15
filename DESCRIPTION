@@ -25,7 +25,8 @@ Imports:
     grDevices,
     graphics,
     utils,
-    methods
+    methods,
+    lasagna
 Suggests:
     testthat (>= 3.0.0),
     remotes,
@@ -38,7 +39,6 @@ Suggests:
     DiagrammeR,
     DiagrammeRsvg,
     SuperCell,
-    lasagna,
     httr,
     jsonlite,
     glue,
