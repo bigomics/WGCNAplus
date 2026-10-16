@@ -30,7 +30,7 @@ Imports:
 Suggests:
     testthat (>= 3.0.0),
     remotes,
-    playdata,
+    omicspgx,
     plaid,
     plotly,
     ComplexHeatmap,
@@ -49,7 +49,6 @@ Suggests:
     dplyr,
     corpora
 Remotes:
-    playdata=url::https://github.com/bigomics/playdata/archive/HEAD.zip,
     bigomics/plaid,
     bigomics/lasagna
 Config/testthat/edition: 3
