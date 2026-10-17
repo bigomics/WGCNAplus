@@ -20,5 +20,7 @@ test_that("getLibxGMT reads the default GMT from lib-x", {
 })
 
 test_that("getPlaydataGMT is an alias of getLibxGMT", {
-  expect_identical(body(getPlaydataGMT), quote(getLibxGMT()))
+  skip_if_not_installed("omicspgx")
+  skip_if(is.null(omicspgx::libx_dir()), "lib-x not available")
+  expect_identical(getPlaydataGMT(), getLibxGMT())
 })

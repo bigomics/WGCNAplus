@@ -49,6 +49,7 @@ Suggests:
     dplyr,
     corpora
 Remotes:
+    bigomics/omicspgx,
     bigomics/plaid,
     bigomics/lasagna
 Config/testthat/edition: 3
