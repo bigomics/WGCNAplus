@@ -509,7 +509,7 @@ plotConsensusSampleDendroAndColors <- function(cons, i,
 #' @param colorHeightMax Maximum color row height.
 #' @param main Plot title string.
 #' @param justdata Return data without plotting.
-#' @return NULL (invisible). Generates a plot. If justdata, returns eigengene matrix.
+#' @return NULL (invisible). Generates a plot. If justdata, returns the color matrix.
 #' @export
 plotSampleDendroAndColors <- function(wgcna,
                                       input.type = "wgcna",
@@ -539,23 +539,45 @@ plotSampleDendroAndColors <- function(wgcna,
 
   if (!is.null(datME)) ME0 <- datME
 
-  ME <- ME0[, 0]
-  samples <- rownames(ME)
-  if (show.me) ME <- cbind(ME, ME0)
+  samples <- rownames(ME0)
 
+  ## cluster+colorize one group of columns on its own, independent of the
+  ## other groups, so each group gets its own column order (mirrors
+  ## plotDendroAndColors's kme/traits/contrasts blocks)
+  clustColors <- function(M) {
+    M <- as.matrix(M * 1)
+    sdx <- matrixStats::colSds(M, na.rm = TRUE)
+    M <- M[, which(sdx > 0), drop = FALSE]
+    if (ncol(M) == 0) return(NULL)
+    if (ncol(M) > 2) {
+      corx <- cor(M, use = "pairwise")
+      corx[is.na(corx)] <- 0
+      jj <- fastcluster::hclust(as.dist(1 - corx))$order
+      M <- M[, jj, drop = FALSE]
+    }
+    cm <- WGCNA::numbers2colors(M)
+    colnames(cm) <- colnames(M)
+    cm
+  }
+
+  colors <- NULL
+  addBlock <- function(colors, block) {
+    if (is.null(block)) return(colors)
+    if (is.null(colors)) return(block)
+    cbind(colors, 0, block)
+  }
+
+  if (show.me) {
+    colors <- addBlock(colors, clustColors(ME0[samples, , drop = FALSE]))
+  }
   if (show.traits) {
     sel <- grep("_vs_", colnames(datTraits), invert = TRUE)
-    ME <- cbind(ME, datTraits[samples, sel, drop = FALSE])
+    colors <- addBlock(colors, clustColors(datTraits[samples, sel, drop = FALSE]))
   }
-
   if (show.contrasts) {
     sel <- grep("_vs_", colnames(datTraits))
-    ME <- cbind(ME, datTraits[samples, sel, drop = FALSE])
+    colors <- addBlock(colors, clustColors(datTraits[samples, sel, drop = FALSE]))
   }
-
-  if (NCOL(ME) <= 2) ME <- cbind(ME, ME) ## error if ncol(ME)<=2 !!!!
-  sdx <- matrixStats::colSds(as.matrix(ME * 1), na.rm = TRUE)
-  ME <- ME[, which(sdx > 0), drop = FALSE]
 
   ## Recalculate MEs with color as labels
   if (clust.expr) {
@@ -566,12 +588,7 @@ plotSampleDendroAndColors <- function(wgcna,
   corx[is.na(corx)] <- 0
   sampleTree <- fastcluster::hclust(as.dist(1 - corx), method = "average")
 
-  corx <- cor(ME, use = "pairwise")
-  corx[is.na(corx)] <- 0
-  jj <- fastcluster::hclust(as.dist(1 - corx))$order
-  colors <- WGCNA::numbers2colors(ME[, jj])
-
-  if (justdata) return(ME)
+  if (justdata) return(colors)
 
   if (is.null(main)) {
     if (what == "me") main <- "Sample dendrogram and module heatmap"
@@ -582,8 +599,8 @@ plotSampleDendroAndColors <- function(wgcna,
   WGCNA::plotDendroAndColors(
     dendro = sampleTree,
     colors = colors,
-    groupLabels = colnames(ME)[jj],
-    dendroLabels = rownames(ME),
+    groupLabels = colnames(colors),
+    dendroLabels = samples,
     hang = 0.03,
     addGuide = FALSE,
     guideHang = 0.05,
